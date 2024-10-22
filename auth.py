@@ -51,42 +51,39 @@ def token_required(f):
 def get_token():
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No JSON data provided'}), 400
-        
-        email = data.get('email')
-        if not email:
+        if not data or 'email' not in data:
             return jsonify({'error': 'Email is required'}), 400
             
+        email = data['email']
         if not is_valid_email(email):
             return jsonify({'error': 'Invalid email format'}), 400
 
+        # Check for existing user first
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            return jsonify({'error': 'User already exists'}), 400
+            return jsonify({'error': 'Email already registered'}), 400
 
-        new_user = User(email=email)
-        db.session.add(new_user)
-        db.session.flush()  # Get the ID without committing
+        # Create new user with default values
+        new_user = User(
+            email=email,
+            questionnaire_completed=False,
+            user_type=None
+        )
         
+        # Generate token before adding to database
         try:
+            db.session.add(new_user)
+            db.session.flush()  # Get the ID without committing
             token = generate_token(new_user.id)
             new_user.token = token
             db.session.commit()
             return jsonify({'token': token}), 201
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': f'Error generating token: {str(e)}'}), 500
+            return jsonify({'error': str(e)}), 500
 
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({'error': 'Database integrity error'}), 400
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({'error': f'Database error: {str(e)}'}), 500
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
