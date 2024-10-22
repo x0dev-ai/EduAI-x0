@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container">
-    <h1 class="text-center mb-4">Cuestionario de Clasificación de Perfiles de Usuario</h1>
+    <h1 class="text-center mb-4">Cuestionario para Clasificación de Perfiles de Usuario</h1>
     
     <div class="progress mb-4">
         <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
@@ -200,6 +200,71 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="challenges" value="D">
                     <label class="form-check-label">Falta de tiempo y organización</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimensión de Contenido (25 puntos) -->
+        <div class="questionnaire-section" id="section4">
+            <h3>4. Dimensión de Contenido (25 puntos)</h3>
+            
+            <div class="mb-4">
+                <label class="form-label">4.1. ¿En qué áreas tienes mayor interés?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="A" required>
+                    <label class="form-check-label">Ciencias y matemáticas</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="B">
+                    <label class="form-check-label">Arte y humanidades</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="C">
+                    <label class="form-check-label">Negocios y emprendimiento</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="D">
+                    <label class="form-check-label">Tecnología y programación</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">4.2. ¿Cuál es tu nivel de experiencia en las áreas de interés?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="A" required>
+                    <label class="form-check-label">Principiante</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="B">
+                    <label class="form-check-label">Intermedio</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="C">
+                    <label class="form-check-label">Avanzado</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="D">
+                    <label class="form-check-label">Variado según el tema</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">4.3. ¿Qué herramientas o recursos utilizas para aprender?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="A" required>
+                    <label class="form-check-label">Libros y textos académicos</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="B">
+                    <label class="form-check-label">Videos y tutoriales en línea</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="C">
+                    <label class="form-check-label">Foros y comunidades en línea</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="D">
+                    <label class="form-check-label">Simulaciones y ejercicios prácticos</label>
                 </div>
             </div>
         </div>

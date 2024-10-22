@@ -19,20 +19,25 @@ class QuestionnaireResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
-    # Dimensión Temporal
+    # Dimensión Temporal (20 puntos)
     study_time = db.Column(db.String(1))
     session_duration = db.Column(db.String(1))
     learning_pace = db.Column(db.String(1))
     
-    # Dimensión Metodológica
+    # Dimensión Metodológica (30 puntos)
     learning_style = db.Column(db.String(1))
     content_format = db.Column(db.String(1))
     feedback_preference = db.Column(db.String(1))
     
-    # Dimensión Motivacional
+    # Dimensión Motivacional (25 puntos)
     learning_goals = db.Column(db.String(1))
     motivators = db.Column(db.String(1))
     challenges = db.Column(db.String(1))
+    
+    # Dimensión de Contenido (25 puntos)
+    interest_areas = db.Column(db.String(1))
+    experience_level = db.Column(db.String(1))
+    learning_tools = db.Column(db.String(1))
     
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 

@@ -9,25 +9,39 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSection = 0;
     
     function showSection(index) {
+        if (!sections || !sections.length) return;
+        
         sections.forEach((section, i) => {
-            section.style.display = i === index ? 'block' : 'none';
+            if (section) {
+                section.style.display = i === index ? 'block' : 'none';
+            }
         });
         
         // Update buttons
-        prevBtn.style.display = index === 0 ? 'none' : 'block';
-        nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
-        submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
+        if (prevBtn) {
+            prevBtn.style.display = index === 0 ? 'none' : 'block';
+        }
+        if (nextBtn) {
+            nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
+        }
+        if (submitBtn) {
+            submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
+        }
         
         // Update progress bar
-        const progress = ((index + 1) / sections.length) * 100;
-        progressBar.style.width = `${progress}%`;
-        progressBar.textContent = `${Math.round(progress)}%`;
-        progressBar.setAttribute('aria-valuenow', progress);
+        if (progressBar) {
+            const progress = ((index + 1) / sections.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${Math.round(progress)}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
+        }
         
         currentSection = index;
     }
     
     function validateSection(index) {
+        if (!sections || !sections[index]) return false;
+        
         const section = sections[index];
         const inputs = section.querySelectorAll('input[type="radio"]');
         const groups = new Set();
@@ -67,15 +81,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const formData = {
-                study_time: form.querySelector('input[name="study_time"]:checked').value,
-                session_duration: form.querySelector('input[name="session_duration"]:checked').value,
-                learning_pace: form.querySelector('input[name="learning_pace"]:checked').value,
-                learning_style: form.querySelector('input[name="learning_style"]:checked').value,
-                content_format: form.querySelector('input[name="content_format"]:checked').value,
-                feedback_preference: form.querySelector('input[name="feedback_preference"]:checked').value,
-                learning_goals: form.querySelector('input[name="learning_goals"]:checked').value,
-                motivators: form.querySelector('input[name="motivators"]:checked').value,
-                challenges: form.querySelector('input[name="challenges"]:checked').value
+                study_time: form.querySelector('input[name="study_time"]:checked')?.value,
+                session_duration: form.querySelector('input[name="session_duration"]:checked')?.value,
+                learning_pace: form.querySelector('input[name="learning_pace"]:checked')?.value,
+                learning_style: form.querySelector('input[name="learning_style"]:checked')?.value,
+                content_format: form.querySelector('input[name="content_format"]:checked')?.value,
+                feedback_preference: form.querySelector('input[name="feedback_preference"]:checked')?.value,
+                learning_goals: form.querySelector('input[name="learning_goals"]:checked')?.value,
+                motivators: form.querySelector('input[name="motivators"]:checked')?.value,
+                challenges: form.querySelector('input[name="challenges"]:checked')?.value,
+                interest_areas: form.querySelector('input[name="interest_areas"]:checked')?.value,
+                experience_level: form.querySelector('input[name="experience_level"]:checked')?.value,
+                learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value
             };
             
             submitQuestionnaire(formData);
@@ -83,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Show initial section
-    if (sections.length > 0) {
+    if (sections && sections.length > 0) {
         showSection(0);
     }
 });
