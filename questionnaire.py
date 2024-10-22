@@ -11,7 +11,7 @@ def classify_user(responses):
         'intensivo': 0
     }
     
-    # Análisis temporal
+    # Análisis temporal (20 puntos)
     if responses['study_time'] == 'A':
         scores['estructurado'] += 10
     elif responses['study_time'] == 'C':
@@ -33,74 +33,52 @@ def classify_user(responses):
     else:
         scores['explorador'] += 5
     
-    # Análisis metodológico
+    # Análisis metodológico (30 puntos)
     if responses['learning_style'] == 'A':
-        scores['estructurado'] += 10
+        scores['estructurado'] += 15
     elif responses['learning_style'] == 'B':
+        scores['explorador'] += 15
+    else:
+        scores['intensivo'] += 15
+    
+    if responses['content_format'] == 'A':
+        scores['estructurado'] += 8
+    elif responses['content_format'] == 'B':
+        scores['explorador'] += 8
+    else:
+        scores['intensivo'] += 8
+    
+    if responses['feedback_preference'] == 'A':
+        scores['estructurado'] += 7
+    elif responses['feedback_preference'] == 'B':
+        scores['explorador'] += 7
+    else:
+        scores['intensivo'] += 7
+    
+    # Análisis motivacional (25 puntos)
+    if responses['learning_goals'] == 'A':
+        scores['estructurado'] += 10
+    elif responses['learning_goals'] == 'B':
         scores['explorador'] += 10
     else:
         scores['intensivo'] += 10
     
-    if responses['content_format'] == 'A':
-        scores['estructurado'] += 5
-    elif responses['content_format'] == 'B':
-        scores['explorador'] += 5
-    else:
-        scores['intensivo'] += 5
-    
-    if responses['feedback_preference'] == 'A':
-        scores['estructurado'] += 5
-    elif responses['feedback_preference'] == 'B':
-        scores['explorador'] += 5
-    else:
-        scores['intensivo'] += 5
-    
-    # Análisis motivacional
-    if responses['learning_goals'] == 'A':
-        scores['estructurado'] += 5
-    elif responses['learning_goals'] == 'B':
-        scores['explorador'] += 5
-    else:
-        scores['intensivo'] += 5
-    
     if responses['motivators'] == 'A':
-        scores['estructurado'] += 5
+        scores['estructurado'] += 8
     elif responses['motivators'] == 'B':
-        scores['explorador'] += 5
+        scores['explorador'] += 8
     else:
-        scores['intensivo'] += 5
+        scores['intensivo'] += 8
     
     if responses['challenges'] == 'A':
-        scores['estructurado'] += 5
+        scores['estructurado'] += 7
     elif responses['challenges'] == 'B':
-        scores['explorador'] += 5
+        scores['explorador'] += 7
     else:
-        scores['intensivo'] += 5
-    
-    # Análisis de contenido
-    if responses['interest_areas'] == 'A':
-        scores['estructurado'] += 5
-    elif responses['interest_areas'] == 'B':
-        scores['explorador'] += 5
-    else:
-        scores['intensivo'] += 5
-    
-    if responses['experience_level'] == 'B':
-        scores['estructurado'] += 5
-    elif responses['experience_level'] == 'C':
-        scores['intensivo'] += 5
-    else:
-        scores['explorador'] += 5
-    
-    if responses['learning_tools'] == 'A':
-        scores['estructurado'] += 5
-    elif responses['learning_tools'] == 'B':
-        scores['explorador'] += 5
-    else:
-        scores['intensivo'] += 5
+        scores['intensivo'] += 7
 
     # Map profile types to user types for chatbot interaction
-    profile_type = max(scores, key=scores.get)
+    profile_type = max(scores.items(), key=lambda x: x[1])[0]
     user_type_mapping = {
         'estructurado': 'A',  # Structured learners get detailed explanations
         'explorador': 'B',    # Explorers get balanced explanations
@@ -118,8 +96,7 @@ def submit_questionnaire(current_user):
     required_fields = [
         'study_time', 'session_duration', 'learning_pace',
         'learning_style', 'content_format', 'feedback_preference',
-        'learning_goals', 'motivators', 'challenges',
-        'interest_areas', 'experience_level', 'learning_tools'
+        'learning_goals', 'motivators', 'challenges'
     ]
     
     for field in required_fields:
@@ -137,10 +114,7 @@ def submit_questionnaire(current_user):
         feedback_preference=data['feedback_preference'],
         learning_goals=data['learning_goals'],
         motivators=data['motivators'],
-        challenges=data['challenges'],
-        interest_areas=data['interest_areas'],
-        experience_level=data['experience_level'],
-        learning_tools=data['learning_tools']
+        challenges=data['challenges']
     )
     
     db.session.add(new_response)
@@ -183,10 +157,7 @@ def get_user_profile(current_user):
             'feedback_preference': questionnaire.feedback_preference,
             'learning_goals': questionnaire.learning_goals,
             'motivators': questionnaire.motivators,
-            'challenges': questionnaire.challenges,
-            'interest_areas': questionnaire.interest_areas,
-            'experience_level': questionnaire.experience_level,
-            'learning_tools': questionnaire.learning_tools
+            'challenges': questionnaire.challenges
         }
     }
     

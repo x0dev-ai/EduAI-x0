@@ -6,7 +6,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     token = db.Column(db.String(500), unique=True, nullable=True)
     password_hash = db.Column(db.String(256), nullable=True, default=None)
-    user_type = db.Column(db.String(20), nullable=True, default=None)  # Updated to store longer user type
+    user_type = db.Column(db.String(20), nullable=True, default=None)
     questionnaire_completed = db.Column(db.Boolean, nullable=False, default=False)
 
     def set_password(self, password):
@@ -20,7 +20,7 @@ class QuestionnaireResponse(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Dimensión Temporal
-    study_time = db.Column(db.String(1))  # A, B, C, or D
+    study_time = db.Column(db.String(1))
     session_duration = db.Column(db.String(1))
     learning_pace = db.Column(db.String(1))
     
@@ -33,11 +33,6 @@ class QuestionnaireResponse(db.Model):
     learning_goals = db.Column(db.String(1))
     motivators = db.Column(db.String(1))
     challenges = db.Column(db.String(1))
-    
-    # Dimensión de Contenido
-    interest_areas = db.Column(db.String(1))
-    experience_level = db.Column(db.String(1))
-    learning_tools = db.Column(db.String(1))
     
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 

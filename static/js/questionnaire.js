@@ -42,45 +42,50 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
     
-    prevBtn.addEventListener('click', () => {
-        if (currentSection > 0) {
-            showSection(currentSection - 1);
-        }
-    });
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentSection > 0) {
+                showSection(currentSection - 1);
+            }
+        });
+    }
     
-    nextBtn.addEventListener('click', () => {
-        if (validateSection(currentSection)) {
-            showSection(currentSection + 1);
-        }
-    });
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (validateSection(currentSection)) {
+                showSection(currentSection + 1);
+            }
+        });
+    }
     
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if (!validateSection(currentSection)) {
-            return;
-        }
-        
-        const formData = {
-            study_time: form.querySelector('input[name="study_time"]:checked').value,
-            session_duration: form.querySelector('input[name="session_duration"]:checked').value,
-            learning_pace: form.querySelector('input[name="learning_pace"]:checked').value,
-            learning_style: form.querySelector('input[name="learning_style"]:checked').value,
-            content_format: form.querySelector('input[name="content_format"]:checked').value,
-            feedback_preference: form.querySelector('input[name="feedback_preference"]:checked').value,
-            learning_goals: form.querySelector('input[name="learning_goals"]:checked').value,
-            motivators: form.querySelector('input[name="motivators"]:checked').value,
-            challenges: form.querySelector('input[name="challenges"]:checked').value,
-            interest_areas: form.querySelector('input[name="interest_areas"]:checked').value,
-            experience_level: form.querySelector('input[name="experience_level"]:checked').value,
-            learning_tools: form.querySelector('input[name="learning_tools"]:checked').value
-        };
-        
-        submitQuestionnaire(formData);
-    });
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!validateSection(currentSection)) {
+                return;
+            }
+            
+            const formData = {
+                study_time: form.querySelector('input[name="study_time"]:checked').value,
+                session_duration: form.querySelector('input[name="session_duration"]:checked').value,
+                learning_pace: form.querySelector('input[name="learning_pace"]:checked').value,
+                learning_style: form.querySelector('input[name="learning_style"]:checked').value,
+                content_format: form.querySelector('input[name="content_format"]:checked').value,
+                feedback_preference: form.querySelector('input[name="feedback_preference"]:checked').value,
+                learning_goals: form.querySelector('input[name="learning_goals"]:checked').value,
+                motivators: form.querySelector('input[name="motivators"]:checked').value,
+                challenges: form.querySelector('input[name="challenges"]:checked').value
+            };
+            
+            submitQuestionnaire(formData);
+        });
+    }
     
     // Show initial section
-    showSection(0);
+    if (sections.length > 0) {
+        showSection(0);
+    }
 });
 
 function submitQuestionnaire(formData) {
