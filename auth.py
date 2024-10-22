@@ -1,11 +1,16 @@
 import jwt
 import datetime
+import re
 from flask import Blueprint, request, jsonify, current_app
 from models import User, db
 from functools import wraps
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 auth_bp = Blueprint('auth', __name__)
+
+def is_valid_email(email):
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return re.match(pattern, email) is not None
 
 def generate_token(user_id):
     try:
@@ -52,6 +57,9 @@ def get_token():
         email = data.get('email')
         if not email:
             return jsonify({'error': 'Email is required'}), 400
+            
+        if not is_valid_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:

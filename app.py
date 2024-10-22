@@ -22,7 +22,8 @@ with app.app_context():
     import auth
     import questionnaire
     import chatbot
-    db.create_all()
+    db.drop_all()  # Drop all existing tables
+    db.create_all()  # Create new tables with updated schema
 
 # Register blueprints
 from auth import auth_bp
