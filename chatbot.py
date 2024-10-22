@@ -87,7 +87,7 @@ def chat(current_user):
     messages = get_tailored_prompt(user_type, processed_message)
 
     try:
-        chat_response = mistral_client.chat_completions(
+        chat_response = mistral_client.chat(
             model="mistral-tiny",  # Using tiny model for faster responses
             messages=messages,
             temperature=0.7,
