@@ -6,20 +6,49 @@ body {
 .chat-container {
     height: 400px;
     overflow-y: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: var(--bs-dark);
 }
 
 .chat-message {
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 5px;
+    max-width: 80%;
 }
 
 .user-message {
     background-color: var(--bs-primary);
     color: white;
+    margin-left: auto;
+    border-radius: 15px 15px 0 15px;
 }
 
 .ai-message {
     background-color: var(--bs-secondary);
     color: white;
+    margin-right: auto;
+    border-radius: 15px 15px 15px 0;
+}
+
+.error-message {
+    background-color: var(--bs-danger);
+    color: white;
+    margin: 10px auto;
+    text-align: center;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Toast customization */
+.toast {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
 }
