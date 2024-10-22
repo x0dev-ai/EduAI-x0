@@ -1,25 +1,89 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const questionnaireForm = document.getElementById('questionnaireForm');
+    const form = document.getElementById('questionnaireForm');
+    const sections = document.querySelectorAll('.questionnaire-section');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressBar = document.getElementById('progressBar');
     
-    if (questionnaireForm) {
-        questionnaireForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitQuestionnaire();
+    let currentSection = 0;
+    
+    function showSection(index) {
+        sections.forEach((section, i) => {
+            section.style.display = i === index ? 'block' : 'none';
         });
+        
+        // Update buttons
+        prevBtn.style.display = index === 0 ? 'none' : 'block';
+        nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
+        submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
+        
+        // Update progress bar
+        const progress = ((index + 1) / sections.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${Math.round(progress)}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
+        
+        currentSection = index;
     }
+    
+    function validateSection(index) {
+        const section = sections[index];
+        const inputs = section.querySelectorAll('input[type="radio"]');
+        const groups = new Set();
+        inputs.forEach(input => groups.add(input.name));
+        
+        for (const group of groups) {
+            if (!section.querySelector(`input[name="${group}"]:checked`)) {
+                alert('Por favor, responde todas las preguntas de esta sección.');
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    prevBtn.addEventListener('click', () => {
+        if (currentSection > 0) {
+            showSection(currentSection - 1);
+        }
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        if (validateSection(currentSection)) {
+            showSection(currentSection + 1);
+        }
+    });
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!validateSection(currentSection)) {
+            return;
+        }
+        
+        const formData = {
+            study_time: form.querySelector('input[name="study_time"]:checked').value,
+            session_duration: form.querySelector('input[name="session_duration"]:checked').value,
+            learning_pace: form.querySelector('input[name="learning_pace"]:checked').value,
+            learning_style: form.querySelector('input[name="learning_style"]:checked').value,
+            content_format: form.querySelector('input[name="content_format"]:checked').value,
+            feedback_preference: form.querySelector('input[name="feedback_preference"]:checked').value,
+            learning_goals: form.querySelector('input[name="learning_goals"]:checked').value,
+            motivators: form.querySelector('input[name="motivators"]:checked').value,
+            challenges: form.querySelector('input[name="challenges"]:checked').value,
+            interest_areas: form.querySelector('input[name="interest_areas"]:checked').value,
+            experience_level: form.querySelector('input[name="experience_level"]:checked').value,
+            learning_tools: form.querySelector('input[name="learning_tools"]:checked').value
+        };
+        
+        submitQuestionnaire(formData);
+    });
+    
+    // Show initial section
+    showSection(0);
 });
 
-function submitQuestionnaire() {
-    const formData = {
-        question1: document.querySelector('input[name="question1"]:checked').value,
-        question2: document.querySelector('input[name="question2"]:checked').value,
-        question3: document.querySelector('input[name="question3"]:checked').value,
-        question4: parseInt(document.getElementById('question4').value),
-        question5: document.getElementById('question5').value,
-        question6: Array.from(document.querySelectorAll('input[name="question6"]:checked')).map(el => el.value)
-    };
-
-    // Get token from localStorage
+function submitQuestionnaire(formData) {
     const token = localStorage.getItem('token');
     if (!token) {
         alert('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
@@ -31,7 +95,7 @@ function submitQuestionnaire() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': token  // Add the Authorization header
+            'Authorization': token
         },
         body: JSON.stringify(formData)
     })
@@ -43,7 +107,7 @@ function submitQuestionnaire() {
     })
     .then(data => {
         if (data.user_type) {
-            alert('Cuestionario enviado exitosamente. Tu tipo de usuario es: ' + data.user_type);
+            alert('Cuestionario enviado exitosamente. Tu perfil de aprendizaje ha sido identificado.');
             window.location.href = '/dashboard';
         } else {
             throw new Error(data.message || 'Error desconocido');
@@ -53,7 +117,7 @@ function submitQuestionnaire() {
         console.error('Error:', error);
         alert('Error al enviar el cuestionario: ' + error.message);
         if (error.message.includes('401')) {
-            window.location.href = '/';  // Redirect to login if unauthorized
+            window.location.href = '/';
         }
     });
 }

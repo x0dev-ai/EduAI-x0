@@ -4,9 +4,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    token = db.Column(db.String(500), unique=True, nullable=True)  # Changed to nullable=True since we set it after creation
+    token = db.Column(db.String(500), unique=True, nullable=True)
     password_hash = db.Column(db.String(256), nullable=True, default=None)
-    user_type = db.Column(db.String(1), nullable=True, default=None)
+    user_type = db.Column(db.String(20), nullable=True, default=None)  # Updated to store longer user type
     questionnaire_completed = db.Column(db.Boolean, nullable=False, default=False)
 
     def set_password(self, password):
@@ -18,12 +18,28 @@ class User(db.Model):
 class QuestionnaireResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    question1 = db.Column(db.String(20))
-    question2 = db.Column(db.String(20))
-    question3 = db.Column(db.String(50))
-    question4 = db.Column(db.Integer)
-    question5 = db.Column(db.Text)
-    question6 = db.Column(db.String(100))
+    
+    # Dimensión Temporal
+    study_time = db.Column(db.String(1))  # A, B, C, or D
+    session_duration = db.Column(db.String(1))
+    learning_pace = db.Column(db.String(1))
+    
+    # Dimensión Metodológica
+    learning_style = db.Column(db.String(1))
+    content_format = db.Column(db.String(1))
+    feedback_preference = db.Column(db.String(1))
+    
+    # Dimensión Motivacional
+    learning_goals = db.Column(db.String(1))
+    motivators = db.Column(db.String(1))
+    challenges = db.Column(db.String(1))
+    
+    # Dimensión de Contenido
+    interest_areas = db.Column(db.String(1))
+    experience_level = db.Column(db.String(1))
+    learning_tools = db.Column(db.String(1))
+    
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
