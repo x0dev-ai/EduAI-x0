@@ -1,14 +1,14 @@
 import os
-import re
 from flask import Blueprint, request, jsonify
 from models import User, ChatHistory, db
 from auth import token_required
-from openai import OpenAI
+from mistralai.client import MistralClient
+from mistralai.models.chat_completion import ChatMessage
 
 chatbot_bp = Blueprint('chatbot', __name__)
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
 def preprocess_text(text):
     """
@@ -68,8 +68,8 @@ def get_tailored_prompt(user_type, message):
         """
     
     return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Responde a la siguiente consulta: {message}"}
+        ChatMessage(role="system", content=system_prompt),
+        ChatMessage(role="user", content=f"Responde a la siguiente consulta: {message}")
     ]
 
 @chatbot_bp.route('/chat', methods=['POST'])
@@ -87,13 +87,13 @@ def chat(current_user):
     messages = get_tailored_prompt(user_type, processed_message)
 
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4",
+        chat_response = mistral_client.chat_completions(
+            model="mistral-tiny",  # Using tiny model for faster responses
             messages=messages,
             temperature=0.7,
             max_tokens=500
         )
-        ai_response = response.choices[0].message.content
+        ai_response = chat_response.choices[0].message.content
 
         # Save the chat history
         chat_entry = ChatHistory(

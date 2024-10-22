@@ -10,4 +10,5 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "openai>=1.52.0",
     "pyjwt>=2.9.0",
+    "mistralai==0.4.2",
 ]
