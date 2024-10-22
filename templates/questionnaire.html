@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="text-center mb-4">Cuestionario Inicial</h1>
+<form id="questionnaireForm">
+    <div class="mb-3">
+        <label class="form-label">1. ¿En qué momento del día te sientes más productivo para estudiar?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question1" id="q1_morning" value="Mañana" required>
+            <label class="form-check-label" for="q1_morning">Mañana</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question1" id="q1_afternoon" value="Tarde">
+            <label class="form-check-label" for="q1_afternoon">Tarde</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question1" id="q1_night" value="Noche">
+            <label class="form-check-label" for="q1_night">Noche</label>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">2. ¿Cuánto tiempo puedes mantener la concentración en una tarea?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question2" id="q2_15_30" value="15-30 minutos" required>
+            <label class="form-check-label" for="q2_15_30">15-30 minutos</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question2" id="q2_30_60" value="30-60 minutos">
+            <label class="form-check-label" for="q2_30_60">30-60 minutos</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question2" id="q2_60plus" value="Más de 60 minutos">
+            <label class="form-check-label" for="q2_60plus">Más de 60 minutos</label>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">3. ¿Cómo prefieres aprender nuevo material?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question3" id="q3_visual" value="Viendo videos o imágenes" required>
+            <label class="form-check-label" for="q3_visual">Viendo videos o imágenes</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question3" id="q3_auditory" value="Escuchando explicaciones">
+            <label class="form-check-label" for="q3_auditory">Escuchando explicaciones</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="question3" id="q3_kinesthetic" value="Practicando y experimentando">
+            <label class="form-check-label" for="q3_kinesthetic">Practicando y experimentando</label>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="question4" class="form-label">4. ¿Cuál ha sido tu rendimiento académico promedio? (0-10)</label>
+        <input type="number" class="form-control" id="question4" min="0" max="10" required>
+    </div>
+
+    <div class="mb-3">
+        <label for="question5" class="form-label">5. ¿Cuáles son tus objetivos de aprendizaje principales?</label>
+        <textarea class="form-control" id="question5" rows="3" required></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">6. ¿Qué temas o áreas te interesan más?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="question6" id="q6_tech" value="Tecnología">
+            <label class="form-check-label" for="q6_tech">Tecnología</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="question6" id="q6_science" value="Ciencias">
+            <label class="form-check-label" for="q6_science">Ciencias</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="question6" id="q6_arts" value="Artes">
+            <label class="form-check-label" for="q6_arts">Artes</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="question6" id="q6_humanities" value="Humanidades">
+            <label class="form-check-label" for="q6_humanities">Humanidades</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="question6" id="q6_sports" value="Deportes">
+            <label class="form-check-label" for="q6_sports">Deportes</label>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enviar Cuestionario</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/questionnaire.js') }}"></script>
+{% endblock %}

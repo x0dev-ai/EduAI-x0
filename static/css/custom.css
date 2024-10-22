@@ -1,0 +1,25 @@
+/* Custom styles to complement Bootstrap */
+body {
+    padding-top: 60px;
+}
+
+.chat-container {
+    height: 400px;
+    overflow-y: auto;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.user-message {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+.ai-message {
+    background-color: var(--bs-secondary);
+    color: white;
+}
