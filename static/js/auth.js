@@ -61,9 +61,15 @@ async function getToken(email) {
         const data = await handleResponse(response);
         
         if (data.token) {
-            alert('Tu token: ' + data.token);
+            const tokenDisplay = document.getElementById('tokenDisplay');
+            tokenDisplay.textContent = 'Tu token: ' + data.token;
+            tokenDisplay.style.display = 'block';
             localStorage.setItem('token', data.token);
-            window.location.href = '/questionnaire';
+            
+            // Add a small delay before redirecting
+            setTimeout(() => {
+                window.location.href = '/questionnaire';
+            }, 3000);
         }
     } catch (error) {
         console.error('Error:', error);
