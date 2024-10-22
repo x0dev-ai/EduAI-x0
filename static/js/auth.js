@@ -19,51 +19,76 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function getToken(email) {
-    fetch('/get_token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: email }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.token) {
-            alert('Your token: ' + data.token);
-            localStorage.setItem('token', data.token);
-            window.location.href = '/questionnaire';
-        } else {
-            alert('Error: ' + data.message);
+async function handleResponse(response) {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Error del servidor');
         }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+        return data;
+    } else {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(text || 'Error del servidor');
+        }
+        return { message: text };
+    }
 }
 
-function login(token) {
-    fetch('/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: token }),
-    })
-    .then(response => response.json())
-    .then(data => {
+function showError(message) {
+    const errorToast = document.getElementById('errorToast');
+    if (errorToast) {
+        const errorBody = errorToast.querySelector('.toast-body');
+        errorBody.textContent = message;
+        const toast = new bootstrap.Toast(errorToast);
+        toast.show();
+    } else {
+        alert(message);
+    }
+}
+
+async function getToken(email) {
+    try {
+        const response = await fetch('/get_token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: email }),
+        });
+
+        const data = await handleResponse(response);
+        
+        if (data.token) {
+            alert('Tu token: ' + data.token);
+            localStorage.setItem('token', data.token);
+            window.location.href = '/questionnaire';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error al obtener el token: ' + error.message);
+    }
+}
+
+async function login(token) {
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: token }),
+        });
+
+        const data = await handleResponse(response);
+        
         if (data.message === 'Login successful') {
             localStorage.setItem('token', token);
-            if (data.questionnaire_completed) {
-                window.location.href = '/dashboard';
-            } else {
-                window.location.href = '/questionnaire';
-            }
-        } else {
-            alert('Error: ' + data.message);
+            window.location.href = data.questionnaire_completed ? '/dashboard' : '/questionnaire';
         }
-    })
-    .catch((error) => {
+    } catch (error) {
         console.error('Error:', error);
-    });
+        showError('Error al iniciar sesión: ' + error.message);
+    }
 }
