@@ -19,12 +19,14 @@ def generate_token(user_id):
             'iat': datetime.datetime.utcnow(),
             'sub': user_id
         }
+        # Use proper JWT encoding without any character replacements
         return jwt.encode(
             payload,
             current_app.config.get('SECRET_KEY'),
             algorithm='HS256'
-        )
+        ).replace('|', '')  # Remove any pipe characters if they appear
     except Exception as e:
+        print(f"Token generation error: {str(e)}")  # Log the error
         raise Exception(f"Error generating token: {str(e)}")
 
 def token_required(f):
@@ -96,9 +98,18 @@ def login():
         if not token:
             return jsonify({'error': 'Token is required'}), 400
 
+        # Clean the token
+        token = token.strip().replace('\s+', '')
+        
+        try:
+            # Verify token is valid JWT
+            jwt.decode(token, current_app.config.get('SECRET_KEY'), algorithms=["HS256"])
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token format'}), 401
+
         user = User.query.filter_by(token=token).first()
         if not user:
-            return jsonify({'error': 'Invalid token'}), 401
+            return jsonify({'error': 'User not found with this token'}), 401
 
         return jsonify({
             'message': 'Login successful',

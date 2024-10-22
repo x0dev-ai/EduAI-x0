@@ -73,18 +73,21 @@ async function getToken(email) {
 
 async function login(token) {
     try {
+        // Clean the token before sending
+        const cleanToken = token.trim().replace(/\s+/g, '');
+        
         const response = await fetch('/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ token: token }),
+            body: JSON.stringify({ token: cleanToken }),
         });
 
         const data = await handleResponse(response);
         
         if (data.message === 'Login successful') {
-            localStorage.setItem('token', token);
+            localStorage.setItem('token', cleanToken);
             window.location.href = data.questionnaire_completed ? '/dashboard' : '/questionnaire';
         }
     } catch (error) {
