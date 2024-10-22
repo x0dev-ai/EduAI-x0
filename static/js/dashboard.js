@@ -17,9 +17,9 @@ function loadUserProfile() {
         
         // Add user type description
         const typeDescriptions = {
-            'A': 'Recibirás explicaciones detalladas y desafiantes para maximizar tu aprendizaje.',
-            'B': 'Recibirás explicaciones balanceadas con ejemplos prácticos.',
-            'C': 'Recibirás explicaciones claras y paso a paso con ejemplos cotidianos.'
+            'ESTRUCTURADO': 'Recibirás explicaciones detalladas y analíticas para maximizar tu aprendizaje.',
+            'EXPLORADOR': 'Recibirás explicaciones balanceadas con ejemplos prácticos.',
+            'INTENSIVO': 'Recibirás explicaciones claras y paso a paso con ejemplos cotidianos.'
         };
         const description = document.getElementById('userTypeDescription');
         description.innerHTML = `<p class="mt-2"><small class="text-muted">${typeDescriptions[data.user_type] || ''}</small></p>`;

@@ -102,9 +102,9 @@ def classify_user(responses):
     # Map profile types to user types for chatbot interaction
     profile_type = max(scores.items(), key=lambda x: x[1])[0]
     user_type_mapping = {
-        'estructurado': 'A',  # Structured learners get detailed explanations
-        'explorador': 'B',    # Explorers get balanced explanations
-        'intensivo': 'C'      # Intensive learners get direct explanations
+        'estructurado': 'ESTRUCTURADO',
+        'explorador': 'EXPLORADOR',
+        'intensivo': 'INTENSIVO'
     }
     
     return user_type_mapping[profile_type]
