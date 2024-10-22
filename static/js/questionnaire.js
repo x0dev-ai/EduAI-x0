@@ -19,24 +19,41 @@ function submitQuestionnaire() {
         question6: Array.from(document.querySelectorAll('input[name="question6"]:checked')).map(el => el.value)
     };
 
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
+        window.location.href = '/';
+        return;
+    }
+
     fetch('/submit_questionnaire', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': localStorage.getItem('token')
+            'Authorization': token  // Add the Authorization header
         },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.user_type) {
-            alert('Questionnaire submitted successfully. Your user type is: ' + data.user_type);
+            alert('Cuestionario enviado exitosamente. Tu tipo de usuario es: ' + data.user_type);
             window.location.href = '/dashboard';
         } else {
-            alert('Error: ' + data.message);
+            throw new Error(data.message || 'Error desconocido');
         }
     })
     .catch((error) => {
         console.error('Error:', error);
+        alert('Error al enviar el cuestionario: ' + error.message);
+        if (error.message.includes('401')) {
+            window.location.href = '/';  // Redirect to login if unauthorized
+        }
     });
 }
