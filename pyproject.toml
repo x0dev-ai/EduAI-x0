@@ -11,4 +11,6 @@ dependencies = [
     "openai>=1.52.0",
     "pyjwt>=2.9.0",
     "mistralai==0.4.2",
+    "scikit-learn>=1.5.2",
+    "nltk>=3.9.1",
 ]
