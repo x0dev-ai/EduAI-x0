@@ -646,6 +646,7 @@ dependencies = [
     { name = "psycopg2-binary" },
     { name = "pyjwt" },
     { name = "scikit-learn" },
+    { name = "werkzeug" },
 ]
 
 [package.metadata]
@@ -660,6 +661,7 @@ requires-dist = [
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pyjwt", specifier = ">=2.9.0" },
     { name = "scikit-learn", specifier = ">=1.5.2" },
+    { name = "werkzeug", specifier = ">=3.0.4" },
 ]
 
 [[package]]

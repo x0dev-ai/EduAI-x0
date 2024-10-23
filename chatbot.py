@@ -5,7 +5,7 @@ from models import User, ChatHistory, db
 from auth import token_required
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -13,6 +13,7 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import numpy as np
 import time
+from werkzeug.utils import secure_filename
 
 # Create NLTK data directory
 nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
@@ -51,18 +52,15 @@ def extract_topics(text):
                 and len(word) > 3 
                 and tag in ['NN', 'NNS', 'NNP', 'NNPS']]
         return list(set(topics))
-    except LookupError as e:
-        print(f"NLTK data missing: {e}")
-        return [text.lower()]  # Fallback to using the raw text
     except Exception as e:
         print(f"Error in topic extraction: {e}")
-        return []
+        return [text.lower()]
 
 def find_similar_questions(current_question, user_id, limit=5):
     """Find similar previous questions using TF-IDF and cosine similarity"""
     history = ChatHistory.query.filter_by(
         user_id=user_id,
-        helpful=True  # Only consider helpful interactions
+        helpful=True
     ).order_by(ChatHistory.timestamp.desc()).all()
     
     if not history:
@@ -73,22 +71,27 @@ def find_similar_questions(current_question, user_id, limit=5):
     if not previous_questions:
         return []
     
-    vectorizer = TfidfVectorizer(stop_words='english')
-    all_questions = [current_question] + previous_questions
-    tfidf_matrix = vectorizer.fit_transform(all_questions)
-    
-    similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
-    
-    similar_interactions = []
-    for idx in (-similarities).argsort()[:limit]:
-        if similarities[idx] > 0.3:  # Similarity threshold
-            similar_interactions.append({
-                'question': history[idx].message,
-                'response': history[idx].response,
-                'similarity': similarities[idx]
-            })
-    
-    return similar_interactions
+    try:
+        vectorizer = TfidfVectorizer(stop_words='english')
+        all_questions = [current_question] + previous_questions
+        tfidf_matrix = vectorizer.fit_transform(all_questions)
+        
+        similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
+        
+        similar_interactions = []
+        for idx in (-similarities).argsort()[:limit]:
+            if similarities[idx] > 0.3:  # Similarity threshold
+                similar_interactions.append({
+                    'question': history[idx].message,
+                    'response': history[idx].response,
+                    'similarity': similarities[idx],
+                    'understanding': history[idx].user_understanding
+                })
+        
+        return similar_interactions
+    except Exception as e:
+        print(f"Error finding similar questions: {e}")
+        return []
 
 def analyze_user_progress(user_id):
     """Enhanced analysis of user's learning progress"""
@@ -102,13 +105,37 @@ def analyze_user_progress(user_id):
             'understanding_level': 3,
             'preferred_topics': [],
             'learning_style': 'balanced',
-            'learning_pace': 'normal'
+            'learning_pace': 'normal',
+            'mastery_scores': {}
         }
 
     # Calculate basic metrics
     avg_complexity = sum(chat.complexity_level or 1 for chat in recent_chats) / len(recent_chats)
     avg_understanding = sum(chat.user_understanding or 3 for chat in recent_chats) / len(recent_chats)
     
+    # Calculate topic mastery scores
+    topic_interactions = {}
+    for chat in recent_chats:
+        if chat.topic not in topic_interactions:
+            topic_interactions[chat.topic] = []
+        topic_interactions[chat.topic].append({
+            'understanding': chat.user_understanding or 3,
+            'helpful': chat.helpful,
+            'timestamp': chat.timestamp
+        })
+    
+    mastery_scores = {}
+    for topic, interactions in topic_interactions.items():
+        # Weight recent interactions more heavily
+        total_weight = 0
+        weighted_score = 0
+        for idx, interaction in enumerate(interactions):
+            weight = 1 / (idx + 1)  # More recent interactions get higher weight
+            score = (interaction['understanding'] / 5.0) * (1.5 if interaction['helpful'] else 0.5)
+            weighted_score += score * weight
+            total_weight += weight
+        mastery_scores[topic] = weighted_score / total_weight if total_weight > 0 else 0
+
     # Analyze learning pace
     timestamps = [chat.timestamp for chat in recent_chats]
     if len(timestamps) > 1:
@@ -123,14 +150,14 @@ def analyze_user_progress(user_id):
     else:
         learning_pace = 'normal'
 
-    # Calculate comprehension trends
-    understanding_sequence = [chat.user_understanding or 3 for chat in recent_chats]
-    if len(understanding_sequence) > 5:
-        trend_slope = np.polyfit(range(len(understanding_sequence)), 
-                               understanding_sequence, 1)[0]
+    # Calculate learning style based on interaction patterns
+    if len(recent_chats) > 5:
+        understanding_trend = np.polyfit(range(len(recent_chats)),
+                                       [chat.user_understanding or 3 for chat in recent_chats],
+                                       1)[0]
         learning_style = (
-            'advancing' if trend_slope > 0.1 else
-            'stable' if abs(trend_slope) <= 0.1 else
+            'advancing' if understanding_trend > 0.1 else
+            'stable' if abs(understanding_trend) <= 0.1 else
             'struggling'
         )
     else:
@@ -152,8 +179,25 @@ def analyze_user_progress(user_id):
         'understanding_level': avg_understanding,
         'preferred_topics': preferred_topics,
         'learning_style': learning_style,
-        'learning_pace': learning_pace
+        'learning_pace': learning_pace,
+        'mastery_scores': mastery_scores
     }
+
+def preprocess_text(text):
+    """Preprocess input text"""
+    if not text:
+        return ""
+    text = ' '.join(text.split())
+    text = text.lower()
+    common_typos = {
+        'q ': 'que ',
+        'xq': 'porque',
+        'k ': 'que ',
+        'tb ': 'también ',
+    }
+    for typo, correction in common_typos.items():
+        text = text.replace(typo, correction)
+    return text
 
 def get_tailored_prompt(user_type, message, user_progress, similar_interactions):
     """Generate a tailored prompt based on user type and learning progress"""
@@ -161,19 +205,25 @@ def get_tailored_prompt(user_type, message, user_progress, similar_interactions)
     Eres un tutor de IA especializado en educación. Debes responder en español y adaptar tu estilo según el tipo de estudiante.
     '''
     
+    # Add mastery information
+    mastery_info = "\nNiveles de dominio por tema:\n"
+    for topic, score in user_progress['mastery_scores'].items():
+        mastery_info += f"- {topic}: {score:.2f}/1.0\n"
+    
     # Add context from similar interactions
     context = "\nContexto de interacciones anteriores relevantes:\n"
     for idx, interaction in enumerate(similar_interactions, 1):
         context += f"{idx}. Pregunta similar: {interaction['question']}\n"
         context += f"   Respuesta exitosa: {interaction['response']}\n"
+        context += f"   Nivel de comprensión: {interaction.get('understanding', 3)}/5\n"
     
-    # Add learning analytics
     analytics = f"""
     Análisis del progreso del estudiante:
     - Nivel de complejidad actual: {user_progress['avg_complexity']}/5
     - Nivel de comprensión: {user_progress['understanding_level']}/5
     - Patrón de aprendizaje: {user_progress['learning_style']}
     - Temas preferidos: {', '.join(user_progress['preferred_topics'])}
+    {mastery_info}
     """
     
     if user_type == 'ESTRUCTURADO':
@@ -212,32 +262,24 @@ def get_tailored_prompt(user_type, message, user_progress, similar_interactions)
         ChatMessage(role="user", content=f"Responde a la siguiente consulta: {message}")
     ]
 
-def preprocess_text(text):
-    """Preprocess input text"""
-    text = ' '.join(text.split())
-    text = text.lower()
-    common_typos = {
-        'q ': 'que ',
-        'xq': 'porque',
-        'k ': 'que ',
-        'tb ': 'también ',
-    }
-    for typo, correction in common_typos.items():
-        text = text.replace(typo, correction)
-    words = text.split()
-    text = ' '.join(dict.fromkeys(words))
-    return text
-
 @chatbot_bp.route('/chat', methods=['POST'])
 @token_required
 def chat(current_user):
     start_time = time.time()
-    message = request.json.get('message')
-    if not message:
-        return jsonify({'error': 'No se proporcionó ningún mensaje'}), 400
-
+    message = request.form.get('message', '')
+    file = request.files.get('file')
+    
+    if not message and not file:
+        return jsonify({'error': 'No se proporcionó ningún mensaje o archivo'}), 400
+        
+    # Handle file if present
+    file_info = ""
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        file_info = f"\nArchivo adjunto: {filename}"
+        
     # Preprocess the input message
-    processed_message = preprocess_text(message)
+    processed_message = preprocess_text(message + file_info if file_info else message)
     
     # Get user progress and analytics
     user_progress = analyze_user_progress(current_user.id)
@@ -271,15 +313,12 @@ def chat(current_user):
         # Save the chat history with enhanced tracking
         chat_entry = ChatHistory(
             user_id=current_user.id,
-            message=message,
+            message=message + file_info if file_info else message,
             response=ai_response,
             complexity_level=user_progress['avg_complexity'],
-            user_understanding=None,  # Will be updated with feedback
             topic=main_topic,
             response_time=response_time,
-            session_duration=None,  # Will be updated with feedback
-            preferred_pace=user_progress['learning_pace'],
-            interaction_quality=None  # Will be calculated after feedback
+            preferred_pace=user_progress['learning_pace']
         )
         db.session.add(chat_entry)
         db.session.commit()
@@ -312,7 +351,7 @@ def submit_feedback(current_user):
         if not chat:
             return jsonify({'error': 'Chat not found'}), 404
             
-        chat.helpful = helpful
+        chat.helpful = helpful if helpful is not None else chat.helpful
         if understanding:
             chat.user_understanding = understanding
             
@@ -329,26 +368,6 @@ def submit_feedback(current_user):
         return jsonify({'message': 'Feedback submitted successfully'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@chatbot_bp.route('/chat_history', methods=['GET'])
-@token_required
-def get_chat_history(current_user):
-    history = ChatHistory.query.filter_by(user_id=current_user.id)\
-        .order_by(ChatHistory.timestamp.desc())\
-        .limit(10).all()
-    
-    chat_history = [{
-        'id': chat.id,
-        'message': chat.message,
-        'response': chat.response,
-        'timestamp': chat.timestamp,
-        'complexity_level': chat.complexity_level,
-        'helpful': chat.helpful,
-        'understanding': chat.user_understanding,
-        'topic': chat.topic
-    } for chat in history]
-    
-    return jsonify(chat_history), 200
 
 @chatbot_bp.route('/learning_report', methods=['GET'])
 @token_required

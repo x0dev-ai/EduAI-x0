@@ -34,12 +34,31 @@ function setupChatInterface() {
     const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const removeFile = document.getElementById('removeFile');
+    let currentFile = null;
     let lastChatId = null;
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            currentFile = e.target.files[0];
+            fileName.textContent = currentFile.name;
+            filePreview.style.display = 'block';
+        }
+    });
+
+    removeFile.addEventListener('click', function() {
+        currentFile = null;
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+    });
 
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const message = messageInput.value.trim();
-        if (message) {
+        if (message || currentFile) {
             sendMessage(message);
             messageInput.value = '';
         }
@@ -49,7 +68,6 @@ function setupChatInterface() {
         const feedbackDiv = document.createElement('div');
         feedbackDiv.classList.add('feedback-buttons', 'mt-2', 'mb-3');
         
-        // Helpful/Not helpful buttons
         const helpfulBtn = document.createElement('button');
         helpfulBtn.classList.add('btn', 'btn-sm', 'btn-outline-success', 'me-2');
         helpfulBtn.innerHTML = '👍 Útil';
@@ -60,7 +78,6 @@ function setupChatInterface() {
         notHelpfulBtn.innerHTML = '👎 No útil';
         notHelpfulBtn.onclick = () => submitFeedback(chatId, false);
         
-        // Understanding level buttons
         const understandingDiv = document.createElement('div');
         understandingDiv.classList.add('mt-2');
         understandingDiv.innerHTML = '<small class="text-muted">¿Qué tan bien entendiste la respuesta?</small><br>';
@@ -129,21 +146,22 @@ function setupChatInterface() {
     }
 
     function sendMessage(message) {
-        // Disable input while processing
         messageInput.disabled = true;
         sendButton.disabled = true;
         sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
 
-        // Display user message
         displayMessage(message, 'user-message');
+
+        const formData = new FormData();
+        if (message) formData.append('message', message);
+        if (currentFile) formData.append('file', currentFile);
 
         fetch('/chat', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': localStorage.getItem('token')
             },
-            body: JSON.stringify({ message: message })
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -153,7 +171,6 @@ function setupChatInterface() {
             displayMessage(data.response, 'ai-message');
             lastChatId = data.chat_id;
             
-            // Add feedback buttons after AI response
             if (lastChatId) {
                 const feedbackButtons = createFeedbackButtons(lastChatId);
                 chatMessages.appendChild(feedbackButtons);
@@ -164,11 +181,13 @@ function setupChatInterface() {
             displayMessage('Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.', 'error-message');
         })
         .finally(() => {
-            // Re-enable input
             messageInput.disabled = false;
             sendButton.disabled = false;
             sendButton.innerHTML = 'Enviar';
             messageInput.focus();
+            currentFile = null;
+            fileInput.value = '';
+            filePreview.style.display = 'none';
         });
     }
 
@@ -192,7 +211,6 @@ function showError(message) {
 function showSuccess(message) {
     const successToast = document.getElementById('successToast');
     if (!successToast) {
-        // Create success toast if it doesn't exist
         const toastContainer = document.querySelector('.toast-container');
         const successToastHTML = `
             <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">

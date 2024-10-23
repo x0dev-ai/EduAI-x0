@@ -19,11 +19,16 @@
                 <div id="chatMessages" class="chat-container mb-3"></div>
                 <form id="chatForm">
                     <div class="input-group">
-                        <input type="text" id="messageInput" class="form-control" 
-                               placeholder="Escribe tu pregunta..." aria-label="Mensaje">
-                        <button class="btn btn-primary" type="submit" id="sendButton">
-                            Enviar
-                        </button>
+                        <input type="text" id="messageInput" class="form-control" placeholder="Escribe tu pregunta..." aria-label="Mensaje">
+                        <label class="btn btn-outline-secondary" for="fileInput">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" id="fileInput" style="display: none">
+                        </label>
+                        <button class="btn btn-primary" type="submit" id="sendButton">Enviar</button>
+                    </div>
+                    <div id="filePreview" class="mt-2" style="display: none;">
+                        <small class="text-muted">Archivo adjunto: <span id="fileName"></span></small>
+                        <button type="button" class="btn btn-sm btn-link text-danger" id="removeFile">Eliminar</button>
                     </div>
                     <div class="form-text text-muted mt-2">
                         Escribe tu pregunta y presiona Enviar para recibir ayuda personalizada.
