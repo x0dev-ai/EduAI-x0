@@ -28,7 +28,6 @@ def extract_topics(text):
     """Extract main topics from text using NLTK"""
     tokens = word_tokenize(text.lower())
     stop_words = set(stopwords.words('spanish') + stopwords.words('english'))
-    # Get nouns and important words
     tagged = nltk.pos_tag(tokens)
     topics = [word for word, tag in tagged 
              if word not in stop_words 
@@ -68,122 +67,6 @@ def find_similar_questions(current_question, user_id, limit=5):
     
     return similar_interactions
 
-def calculate_success_metrics(user_id):
-    """Calculate success metrics for a user's learning journey"""
-    recent_chats = ChatHistory.query.filter_by(user_id=user_id)\
-        .order_by(ChatHistory.timestamp.desc())\
-        .limit(50).all()
-    
-    if not recent_chats:
-        return {
-            'overall_success_rate': 0,
-            'avg_response_time': 0,
-            'comprehension_trend': 'new',
-            'mastery_levels': {},
-            'engagement_score': 0
-        }
-    
-    # Calculate metrics
-    success_rate = sum(1 for chat in recent_chats if chat.helpful) / len(recent_chats)
-    avg_response_time = sum(chat.response_time or 0 for chat in recent_chats) / len(recent_chats)
-    
-    # Analyze comprehension trend
-    understanding_scores = [chat.user_understanding for chat in recent_chats if chat.user_understanding]
-    if understanding_scores:
-        recent_avg = np.mean(understanding_scores[:10])
-        older_avg = np.mean(understanding_scores[-10:]) if len(understanding_scores) > 10 else recent_avg
-        comprehension_trend = 'improving' if recent_avg > older_avg else 'stable' if recent_avg == older_avg else 'declining'
-    else:
-        comprehension_trend = 'insufficient_data'
-    
-    # Calculate topic mastery levels
-    topic_interactions = {}
-    for chat in recent_chats:
-        if chat.topic not in topic_interactions:
-            topic_interactions[chat.topic] = {
-                'total': 0,
-                'successful': 0,
-                'understanding': []
-            }
-        topic_interactions[chat.topic]['total'] += 1
-        if chat.helpful:
-            topic_interactions[chat.topic]['successful'] += 1
-        if chat.user_understanding:
-            topic_interactions[chat.topic]['understanding'].append(chat.user_understanding)
-    
-    mastery_levels = {}
-    for topic, data in topic_interactions.items():
-        success_ratio = data['successful'] / data['total']
-        avg_understanding = np.mean(data['understanding']) if data['understanding'] else 3
-        mastery_levels[topic] = (success_ratio * 0.6 + (avg_understanding / 5) * 0.4)
-    
-    # Calculate engagement score based on interaction frequency and quality
-    time_weights = np.exp(-np.arange(len(recent_chats)) / 10)  # Exponential decay
-    interaction_qualities = [(chat.helpful or 0) * (chat.user_understanding or 3) / 5 for chat in recent_chats]
-    engagement_score = np.average(interaction_qualities, weights=time_weights)
-    
-    return {
-        'overall_success_rate': success_rate,
-        'avg_response_time': avg_response_time,
-        'comprehension_trend': comprehension_trend,
-        'mastery_levels': mastery_levels,
-        'engagement_score': engagement_score
-    }
-
-def generate_learning_report(user_id):
-    """Generate a comprehensive learning report"""
-    user = User.query.get(user_id)
-    if not user:
-        return None
-    
-    metrics = calculate_success_metrics(user_id)
-    progress = analyze_user_progress(user_id)
-    
-    # Get topic recommendations
-    low_mastery_topics = [
-        topic for topic, mastery in metrics['mastery_levels'].items()
-        if mastery < 0.6 and topic != 'general'
-    ]
-    
-    # Analyze learning patterns
-    recent_chats = ChatHistory.query.filter_by(user_id=user_id)\
-        .order_by(ChatHistory.timestamp.desc())\
-        .limit(50).all()
-    
-    session_durations = [chat.session_duration for chat in recent_chats if chat.session_duration]
-    preferred_durations = np.median(session_durations) if session_durations else 0
-    
-    # Generate report
-    report = {
-        'user_type': user.user_type,
-        'total_interactions': user.interaction_count,
-        'success_metrics': metrics,
-        'learning_progress': {
-            'mastered_topics': [topic for topic, mastery in metrics['mastery_levels'].items() if mastery >= 0.8],
-            'topics_needing_review': low_mastery_topics,
-            'comprehension_trend': metrics['comprehension_trend'],
-            'preferred_learning_duration': preferred_durations
-        },
-        'recommendations': {
-            'suggested_topics': low_mastery_topics[:3],
-            'recommended_complexity': min(5, max(1, int(metrics['overall_success_rate'] * 5))),
-            'session_duration': f"{int(preferred_durations)} minutes" if preferred_durations else "No data",
-            'learning_style_adjustments': []
-        }
-    }
-    
-    # Add learning style recommendations
-    if metrics['overall_success_rate'] < 0.6:
-        report['recommendations']['learning_style_adjustments'].append(
-            "Consider simplifying explanations and increasing examples"
-        )
-    if progress['learning_style'] == 'advancing':
-        report['recommendations']['learning_style_adjustments'].append(
-            "Ready for more challenging content"
-        )
-    
-    return report
-
 def analyze_user_progress(user_id):
     """Enhanced analysis of user's learning progress"""
     recent_chats = ChatHistory.query.filter_by(user_id=user_id)\
@@ -195,57 +78,14 @@ def analyze_user_progress(user_id):
             'avg_complexity': 1,
             'understanding_level': 3,
             'preferred_topics': [],
-            'interaction_pattern': 'new',
             'learning_style': 'balanced',
-            'topic_clusters': {},
-            'learning_pace': 'normal',
-            'mastery_trends': {}
+            'learning_pace': 'normal'
         }
 
     # Calculate basic metrics
     avg_complexity = sum(chat.complexity_level or 1 for chat in recent_chats) / len(recent_chats)
     avg_understanding = sum(chat.user_understanding or 3 for chat in recent_chats) / len(recent_chats)
     
-    # Enhanced topic analysis with mastery tracking
-    topic_clusters = {}
-    for chat in recent_chats:
-        topics = extract_topics(chat.message)
-        for topic in topics:
-            if topic not in topic_clusters:
-                topic_clusters[topic] = {
-                    'count': 0,
-                    'avg_understanding': 0,
-                    'helpful_count': 0,
-                    'complexity_history': [],
-                    'understanding_history': [],
-                    'mastery_score': 0
-                }
-            cluster = topic_clusters[topic]
-            cluster['count'] += 1
-            cluster['avg_understanding'] += chat.user_understanding or 3
-            cluster['complexity_history'].append(chat.complexity_level or 1)
-            cluster['understanding_history'].append(chat.user_understanding or 3)
-            if chat.helpful:
-                cluster['helpful_count'] += 1
-
-    # Calculate advanced topic statistics
-    for topic, cluster in topic_clusters.items():
-        cluster['avg_understanding'] /= cluster['count']
-        cluster['success_rate'] = cluster['helpful_count'] / cluster['count']
-        
-        # Calculate mastery score using complexity and understanding trends
-        understanding_trend = np.polyfit(range(len(cluster['understanding_history'])), 
-                                       cluster['understanding_history'], 1)[0]
-        complexity_trend = np.polyfit(range(len(cluster['complexity_history'])), 
-                                    cluster['complexity_history'], 1)[0]
-        
-        cluster['mastery_score'] = (
-            cluster['success_rate'] * 0.4 +
-            (cluster['avg_understanding'] / 5) * 0.3 +
-            (understanding_trend > 0) * 0.2 +
-            (complexity_trend > 0) * 0.1
-        )
-
     # Analyze learning pace
     timestamps = [chat.timestamp for chat in recent_chats]
     if len(timestamps) > 1:
@@ -258,7 +98,7 @@ def analyze_user_progress(user_id):
             'casual'
         )
     else:
-        learning_pace = 'new'
+        learning_pace = 'normal'
 
     # Calculate comprehension trends
     understanding_sequence = [chat.user_understanding or 3 for chat in recent_chats]
@@ -273,25 +113,23 @@ def analyze_user_progress(user_id):
     else:
         learning_style = 'balanced'
 
-    # Determine preferred topics based on enhanced metrics
-    preferred_topics = sorted(
-        topic_clusters.items(),
-        key=lambda x: (x[1]['mastery_score'], x[1]['count']),
-        reverse=True
-    )[:5]
+    # Get preferred topics
+    topics = []
+    for chat in recent_chats:
+        if chat.helpful:
+            topics.extend(extract_topics(chat.message))
+    
+    preferred_topics = [topic for topic, count 
+                       in sorted([(t, topics.count(t)) for t in set(topics)], 
+                               key=lambda x: x[1], 
+                               reverse=True)[:5]]
 
     return {
         'avg_complexity': avg_complexity,
         'understanding_level': avg_understanding,
-        'preferred_topics': [topic for topic, _ in preferred_topics],
-        'interaction_pattern': 'advancing' if avg_understanding > 3.5 else 'struggling',
+        'preferred_topics': preferred_topics,
         'learning_style': learning_style,
-        'learning_pace': learning_pace,
-        'topic_clusters': topic_clusters,
-        'mastery_trends': {
-            topic: cluster['mastery_score']
-            for topic, cluster in topic_clusters.items()
-        }
+        'learning_pace': learning_pace
     }
 
 def get_tailored_prompt(user_type, message, user_progress, similar_interactions):
@@ -492,7 +330,7 @@ def get_chat_history(current_user):
 @chatbot_bp.route('/learning_report', methods=['GET'])
 @token_required
 def get_learning_report(current_user):
-    report = generate_learning_report(current_user.id)
-    if not report:
+    user_progress = analyze_user_progress(current_user.id)
+    if not user_progress:
         return jsonify({'error': 'Could not generate learning report'}), 404
-    return jsonify(report), 200
+    return jsonify(user_progress), 200
