@@ -37,35 +37,34 @@ def preprocess_text(text):
     return text
 
 def get_tailored_prompt(user_type, message):
-    """Generate tailored prompts based on user type with specific Spanish instructions"""
-    base_system_prompt = """
+    base_system_prompt = '''
     Eres un tutor de IA especializado en educación. Debes responder en español y adaptar tu estilo según el tipo de estudiante.
-    """
+    '''
     
-    if user_type == 'A':
-        system_prompt = base_system_prompt + """
-        Para estudiantes tipo A (alto rendimiento):
-        - Proporciona explicaciones detalladas y profundas
+    if user_type == 'ESTRUCTURADO':
+        system_prompt = base_system_prompt + '''
+        Para estudiantes estructurados:
+        - Proporciona explicaciones detalladas y analíticas
         - Incluye referencias académicas cuando sea relevante
         - Plantea preguntas desafiantes para estimular el pensamiento crítico
         - Sugiere recursos adicionales avanzados
-        """
-    elif user_type == 'B':
-        system_prompt = base_system_prompt + """
-        Para estudiantes tipo B (rendimiento medio):
+        '''
+    elif user_type == 'EXPLORADOR':
+        system_prompt = base_system_prompt + '''
+        Para estudiantes exploradores:
         - Ofrece explicaciones balanceadas y claras
         - Incluye ejemplos prácticos
         - Proporciona pasos intermedios en las explicaciones
         - Sugiere ejercicios de práctica moderados
-        """
-    else:  # type C
-        system_prompt = base_system_prompt + """
-        Para estudiantes tipo C (necesita apoyo adicional):
+        '''
+    else:  # INTENSIVO
+        system_prompt = base_system_prompt + '''
+        Para estudiantes intensivos:
         - Da explicaciones simples y directas
         - Usa muchos ejemplos de la vida cotidiana
         - Divide la información en pasos pequeños y manejables
         - Ofrece refuerzo positivo constante
-        """
+        '''
     
     return [
         ChatMessage(role="system", content=system_prompt),
