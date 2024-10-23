@@ -13,4 +13,5 @@ dependencies = [
     "mistralai==0.4.2",
     "scikit-learn>=1.5.2",
     "nltk>=3.9.1",
+    "numpy",
 ]

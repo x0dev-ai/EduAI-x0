@@ -1,5 +1,6 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,3 +53,12 @@ class ChatHistory(db.Model):
     topic = db.Column(db.String(100))  # Topic classification
     complexity_level = db.Column(db.Integer)  # Track response complexity (1-5)
     user_understanding = db.Column(db.Integer)  # User comprehension level (1-5)
+    
+    # New fields for enhanced monitoring
+    response_time = db.Column(db.Float)  # Response time in seconds
+    feedback_comments = db.Column(db.Text)  # Detailed user feedback
+    learning_progress = db.Column(db.Float)  # Comprehension improvement (-1 to 1)
+    mastery_level = db.Column(db.Float)  # Topic mastery level (0-1)
+    session_duration = db.Column(db.Integer)  # Time spent on this interaction
+    preferred_pace = db.Column(db.String(20))  # User's learning pace preference
+    interaction_quality = db.Column(db.Float)  # Combined quality score (0-1)
