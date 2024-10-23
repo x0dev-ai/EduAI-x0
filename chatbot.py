@@ -1,4 +1,5 @@
 import os
+import nltk
 from flask import Blueprint, request, jsonify
 from models import User, ChatHistory, db
 from auth import token_required
@@ -8,16 +9,32 @@ from datetime import datetime, timedelta
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import numpy as np
 import time
 
-# Download required NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
+# Create NLTK data directory
+nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
+os.makedirs(nltk_data_dir, exist_ok=True)
+
+# Set NLTK data path
+nltk.data.path.append(nltk_data_dir)
+
+# Download required NLTK data with error handling
+def download_nltk_data():
+    try:
+        nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
+        nltk.download('stopwords', download_dir=nltk_data_dir, quiet=True)
+        nltk.download('averaged_perceptron_tagger', download_dir=nltk_data_dir, quiet=True)
+    except Exception as e:
+        print(f"Error downloading NLTK data: {e}")
+        return False
+    return True
+
+# Call download function before setting up the blueprint
+if not download_nltk_data():
+    print("Warning: NLTK data download failed, some features may not work properly")
 
 chatbot_bp = Blueprint('chatbot', __name__)
 
@@ -25,19 +42,21 @@ MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
 def extract_topics(text):
-    """Extract main topics from text using NLTK"""
-    # Use standard punkt tokenizer
-    tokens = word_tokenize(text.lower())
-    # Get Spanish and English stop words
-    stop_words = set(stopwords.words('spanish') + stopwords.words('english'))
-    # Tag parts of speech
-    tagged = nltk.pos_tag(tokens)
-    # Extract nouns as topics
-    topics = [word for word, tag in tagged 
-             if word not in stop_words 
-             and len(word) > 3 
-             and tag in ['NN', 'NNS', 'NNP', 'NNPS']]
-    return list(set(topics))
+    try:
+        tokens = word_tokenize(text.lower())
+        stop_words = set(stopwords.words('spanish') + stopwords.words('english'))
+        tagged = nltk.pos_tag(tokens)
+        topics = [word for word, tag in tagged 
+                if word not in stop_words 
+                and len(word) > 3 
+                and tag in ['NN', 'NNS', 'NNP', 'NNPS']]
+        return list(set(topics))
+    except LookupError as e:
+        print(f"NLTK data missing: {e}")
+        return [text.lower()]  # Fallback to using the raw text
+    except Exception as e:
+        print(f"Error in topic extraction: {e}")
+        return []
 
 def find_similar_questions(current_question, user_id, limit=5):
     """Find similar previous questions using TF-IDF and cosine similarity"""
