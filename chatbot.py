@@ -26,9 +26,13 @@ mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
 def extract_topics(text):
     """Extract main topics from text using NLTK"""
+    # Use standard punkt tokenizer
     tokens = word_tokenize(text.lower())
+    # Get Spanish and English stop words
     stop_words = set(stopwords.words('spanish') + stopwords.words('english'))
+    # Tag parts of speech
     tagged = nltk.pos_tag(tokens)
+    # Extract nouns as topics
     topics = [word for word, tag in tagged 
              if word not in stop_words 
              and len(word) > 3 
