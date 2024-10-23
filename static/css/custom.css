@@ -105,6 +105,15 @@ h1 {
 
 .fa-paperclip {
     font-size: 1.1rem;
+    color: #ffffff;  /* Make the icon white */
+}
+
+.btn-outline-secondary .fa-paperclip {
+    color: #ffffff;  /* Ensure icon is white even in outline button */
+}
+
+.btn-outline-secondary:hover .fa-paperclip {
+    color: #ffffff;  /* Keep icon white on hover */
 }
 
 /* Mejoras en el chat */
