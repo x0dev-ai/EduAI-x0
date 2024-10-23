@@ -91,6 +91,22 @@ h1 {
     box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
 }
 
+.btn-outline-secondary {
+    color: #6b7280;
+    border-color: rgba(255, 255, 255, 0.2);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.fa-paperclip {
+    font-size: 1.1rem;
+}
+
 /* Mejoras en el chat */
 .chat-container {
     height: 500px;
