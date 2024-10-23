@@ -8,14 +8,15 @@
 /* Estilos generales */
 body {
     padding-top: 60px;
-    background-color: #f8fafc;
-    color: #1e293b;
+    background-color: #111827;
+    color: #f3f4f6;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Mejoras en las tarjetas */
 .card {
-    border: none;
+    background-color: #1a1f2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: var(--card-shadow);
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     border-radius: 1rem;
@@ -41,15 +42,21 @@ h1 {
 }
 
 .card-title {
-    color: #334155;
+    color: #ffffff;
     font-weight: 600;
     font-size: 1.25rem;
     margin-bottom: 1.5rem;
 }
 
+.text-muted {
+    color: #a0aec0 !important;
+}
+
 /* Mejoras en los inputs */
 .form-control {
-    border: 2px solid #e2e8f0;
+    background-color: #161b28;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     transition: all var(--transition-speed);
@@ -58,6 +65,11 @@ h1 {
 .form-control:focus {
     border-color: #6366f1;
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    background-color: #1a1f2e;
+}
+
+.form-control::placeholder {
+    color: #6b7280;
 }
 
 /* Mejoras en los botones */
@@ -82,7 +94,7 @@ h1 {
 /* Mejoras en el chat */
 .chat-container {
     height: 500px;
-    background-color: #ffffff;
+    background-color: #1a1f2e;
     border: none;
     box-shadow: var(--card-shadow);
     border-radius: 1rem;
@@ -95,6 +107,7 @@ h1 {
     border-radius: 1rem;
     max-width: 85%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .user-message {
@@ -105,8 +118,8 @@ h1 {
 }
 
 .ai-message {
-    background-color: #f1f5f9;
-    color: #334155;
+    background-color: #1e2433;
+    color: #f3f4f6;
     margin-right: auto;
     border-bottom-left-radius: 0.25rem;
 }
@@ -119,8 +132,8 @@ h1 {
 }
 
 .alert-success {
-    background-color: #ecfdf5;
-    color: #065f46;
+    background-color: rgba(6, 95, 70, 0.2);
+    color: #34d399;
     border-left: 4px solid #059669;
 }
 
