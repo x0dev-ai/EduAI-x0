@@ -8,6 +8,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=True, default=None)
     user_type = db.Column(db.String(20), nullable=True, default=None)
     questionnaire_completed = db.Column(db.Boolean, nullable=False, default=False)
+    interaction_count = db.Column(db.Integer, default=0)  # Track total interactions
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -47,3 +48,7 @@ class ChatHistory(db.Model):
     message = db.Column(db.Text, nullable=False)
     response = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    helpful = db.Column(db.Boolean, nullable=True)  # User feedback on response
+    topic = db.Column(db.String(100))  # Topic classification
+    complexity_level = db.Column(db.Integer)  # Track response complexity (1-5)
+    user_understanding = db.Column(db.Integer)  # User comprehension level (1-5)

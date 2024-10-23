@@ -34,6 +34,7 @@ function setupChatInterface() {
     const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
+    let lastChatId = null;
 
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -43,6 +44,89 @@ function setupChatInterface() {
             messageInput.value = '';
         }
     });
+
+    function createFeedbackButtons(chatId) {
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.classList.add('feedback-buttons', 'mt-2', 'mb-3');
+        
+        // Helpful/Not helpful buttons
+        const helpfulBtn = document.createElement('button');
+        helpfulBtn.classList.add('btn', 'btn-sm', 'btn-outline-success', 'me-2');
+        helpfulBtn.innerHTML = '👍 Útil';
+        helpfulBtn.onclick = () => submitFeedback(chatId, true);
+        
+        const notHelpfulBtn = document.createElement('button');
+        notHelpfulBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'me-2');
+        notHelpfulBtn.innerHTML = '👎 No útil';
+        notHelpfulBtn.onclick = () => submitFeedback(chatId, false);
+        
+        // Understanding level buttons
+        const understandingDiv = document.createElement('div');
+        understandingDiv.classList.add('mt-2');
+        understandingDiv.innerHTML = '<small class="text-muted">¿Qué tan bien entendiste la respuesta?</small><br>';
+        
+        for (let i = 1; i <= 5; i++) {
+            const levelBtn = document.createElement('button');
+            levelBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'me-1');
+            levelBtn.textContent = i;
+            levelBtn.onclick = () => submitUnderstanding(chatId, i);
+            understandingDiv.appendChild(levelBtn);
+        }
+        
+        feedbackDiv.appendChild(helpfulBtn);
+        feedbackDiv.appendChild(notHelpfulBtn);
+        feedbackDiv.appendChild(understandingDiv);
+        
+        return feedbackDiv;
+    }
+
+    function submitFeedback(chatId, helpful) {
+        fetch('/chat_feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': localStorage.getItem('token')
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                helpful: helpful
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            showSuccess('¡Gracias por tu feedback!');
+        })
+        .catch(error => {
+            showError('Error al enviar feedback: ' + error.message);
+        });
+    }
+
+    function submitUnderstanding(chatId, level) {
+        fetch('/chat_feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': localStorage.getItem('token')
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                understanding: level
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            showSuccess('¡Gracias por indicar tu nivel de comprensión!');
+        })
+        .catch(error => {
+            showError('Error al enviar nivel de comprensión: ' + error.message);
+        });
+    }
 
     function sendMessage(message) {
         // Disable input while processing
@@ -67,6 +151,13 @@ function setupChatInterface() {
                 throw new Error(data.error);
             }
             displayMessage(data.response, 'ai-message');
+            lastChatId = data.chat_id;
+            
+            // Add feedback buttons after AI response
+            if (lastChatId) {
+                const feedbackButtons = createFeedbackButtons(lastChatId);
+                chatMessages.appendChild(feedbackButtons);
+            }
         })
         .catch((error) => {
             showError('Error: ' + error.message);
@@ -95,5 +186,29 @@ function showError(message) {
     const errorBody = errorToast.querySelector('.toast-body');
     errorBody.textContent = message;
     const toast = new bootstrap.Toast(errorToast);
+    toast.show();
+}
+
+function showSuccess(message) {
+    const successToast = document.getElementById('successToast');
+    if (!successToast) {
+        // Create success toast if it doesn't exist
+        const toastContainer = document.querySelector('.toast-container');
+        const successToastHTML = `
+            <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-success text-white">
+                    <strong class="me-auto">Éxito</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                </div>
+                <div class="toast-body"></div>
+            </div>
+        `;
+        toastContainer.insertAdjacentHTML('beforeend', successToastHTML);
+    }
+    
+    const successToastElement = document.getElementById('successToast');
+    const successBody = successToastElement.querySelector('.toast-body');
+    successBody.textContent = message;
+    const toast = new bootstrap.Toast(successToastElement);
     toast.show();
 }
