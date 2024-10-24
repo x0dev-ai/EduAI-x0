@@ -1,12 +1,6 @@
 import os
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
-
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
+from models import db
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "eduai_companion_secret_key"
@@ -15,17 +9,15 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
+
+# Initialize the database
 db.init_app(app)
 
+# Create tables
 with app.app_context():
-    import models
-    import auth
-    import questionnaire
-    import chatbot
-    db.drop_all()  # Drop all existing tables
-    db.create_all()  # Create new tables with updated schema
+    db.create_all()
 
-# Register blueprints
+# Register blueprints after database initialization
 from auth import auth_bp
 from questionnaire import questionnaire_bp
 from chatbot import chatbot_bp
