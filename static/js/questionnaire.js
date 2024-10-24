@@ -38,42 +38,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentSection = index;
     }
-
-    // Handle learning difficulty selection
-    const learningDifficultyInputs = document.querySelectorAll('input[name="learning_difficulty"]');
-    const tdahQuestions = document.getElementById('tdahQuestions');
-    const dyslexiaQuestions = document.getElementById('dyslexiaQuestions');
-
-    learningDifficultyInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            tdahQuestions.style.display = 'none';
-            dyslexiaQuestions.style.display = 'none';
-            
-            if (this.value === 'TDAH') {
-                tdahQuestions.style.display = 'block';
-            } else if (this.value === 'dislexia') {
-                dyslexiaQuestions.style.display = 'block';
-            }
-        });
-    });
     
     function validateSection(index) {
         if (!sections || !sections[index]) return false;
         
         const section = sections[index];
-        const inputs = section.querySelectorAll('input[type="radio"], select');
+        const inputs = section.querySelectorAll('input[type="radio"]');
         const groups = new Set();
-        
-        inputs.forEach(input => {
-            if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
-                groups.add(input.name);
-            }
-        });
+        inputs.forEach(input => groups.add(input.name));
         
         for (const group of groups) {
-            const selectedInput = section.querySelector(`input[name="${group}"]:checked, select[name="${group}"]`);
-            if (!selectedInput || !selectedInput.value) {
-                alert('Por favor, responde todas las preguntas visibles de esta sección.');
+            if (!section.querySelector(`input[name="${group}"]:checked`)) {
+                alert('Por favor, responde todas las preguntas de esta sección.');
                 return false;
             }
         }
@@ -116,28 +92,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 challenges: form.querySelector('input[name="challenges"]:checked')?.value,
                 interest_areas: form.querySelector('input[name="interest_areas"]:checked')?.value,
                 experience_level: form.querySelector('input[name="experience_level"]:checked')?.value,
-                learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value,
-                learning_difficulty: form.querySelector('input[name="learning_difficulty"]:checked')?.value
+                learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value
             };
-
-            // Add difficulty-specific details based on selection
-            if (formData.learning_difficulty === 'TDAH') {
-                formData.difficulty_details = {
-                    attention: form.querySelector('select[name="tdah_attention"]')?.value,
-                    distraction: form.querySelector('select[name="tdah_distraction"]')?.value,
-                    physical_restlessness: form.querySelector('select[name="tdah_physical_restlessness"]')?.value,
-                    activity_preference: form.querySelector('select[name="tdah_activity_preference"]')?.value,
-                    concentration_time: form.querySelector('select[name="tdah_concentration_time"]')?.value
-                };
-            } else if (formData.learning_difficulty === 'dislexia') {
-                formData.difficulty_details = {
-                    reading_difficulty: form.querySelector('select[name="dyslexia_reading_difficulty"]')?.value,
-                    content_preference: form.querySelector('select[name="dyslexia_content_preference"]')?.value,
-                    organization: form.querySelector('select[name="dyslexia_organization"]')?.value,
-                    reading_speed: form.querySelector('select[name="dyslexia_reading_speed"]')?.value,
-                    comprehension: form.querySelector('select[name="dyslexia_comprehension"]')?.value
-                };
-            }
             
             submitQuestionnaire(formData);
         });

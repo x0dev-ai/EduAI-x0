@@ -10,8 +10,6 @@ class User(db.Model):
     user_type = db.Column(db.String(20), nullable=True, default=None)
     questionnaire_completed = db.Column(db.Boolean, nullable=False, default=False)
     interaction_count = db.Column(db.Integer, default=0)  # Track total interactions
-    learning_difficulty = db.Column(db.String(20))  # Store learning difficulty type
-    difficulty_details = db.Column(db.JSON)  # Store specific questionnaire responses
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
