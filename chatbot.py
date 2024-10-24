@@ -53,7 +53,6 @@ def extract_topics(text):
         return [text.lower()]
 
 def calculate_user_progress(user_id):
-    """Calculate user's overall learning progress"""
     chat_history = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).all()
     
     if not chat_history:
@@ -63,10 +62,7 @@ def calculate_user_progress(user_id):
     weighted_progress = 0
     
     for i, chat in enumerate(chat_history):
-        # More recent interactions have higher weight
         weight = 1 / (i + 1)
-        
-        # Calculate interaction score based on multiple factors
         interaction_score = 0
         if chat.helpful:
             interaction_score += 0.4
@@ -77,12 +73,10 @@ def calculate_user_progress(user_id):
             
         weighted_progress += interaction_score * weight
     
-    # Normalize progress to percentage
     progress = (weighted_progress / (1 if total_interactions == 0 else total_interactions)) * 100
     return min(round(progress), 100)
 
 def get_completed_questions_count(user_id):
-    """Get count of completed chat interactions"""
     return ChatHistory.query.filter_by(user_id=user_id).count()
 
 def find_similar_questions(current_question, user_id, limit=5):
@@ -155,7 +149,7 @@ def analyze_user_progress(user_id):
         total_weight = 0
         weighted_score = 0
         for idx, interaction in enumerate(interactions):
-            weight = 1 / (idx + 1)  # More recent interactions have higher weight
+            weight = 1 / (idx + 1)
             score = (interaction['understanding'] / 5.0) * (1.5 if interaction['helpful'] else 0.5)
             weighted_score += score * weight
             total_weight += weight
@@ -221,33 +215,88 @@ def preprocess_text(text):
         text = text.replace(typo, correction)
     return text
 
+def calculate_response_complexity(user_progress, topic_mastery):
+    base_complexity = 3
+    
+    if user_progress.get('learning_style') == 'struggling':
+        base_complexity = max(1, base_complexity - 1)
+    elif user_progress.get('learning_style') == 'advancing':
+        base_complexity = min(5, base_complexity + 1)
+    
+    if topic_mastery > 0.8:
+        base_complexity = min(5, base_complexity + 1)
+    elif topic_mastery < 0.4:
+        base_complexity = max(1, base_complexity - 1)
+        
+    return base_complexity
+
+def calculate_mastery_adjustment(chat_history, topic):
+    recent_interactions = [chat for chat in chat_history 
+                         if chat.topic == topic and chat.timestamp][-5:]
+    
+    if not recent_interactions:
+        return 0
+    
+    total_weight = 0
+    weighted_score = 0
+    
+    for idx, interaction in enumerate(recent_interactions):
+        weight = 1 / (idx + 1)
+        
+        score = 0
+        if interaction.helpful:
+            score += 0.3
+        if interaction.user_understanding:
+            score += (interaction.user_understanding / 5) * 0.4
+        if interaction.interaction_quality:
+            score += interaction.interaction_quality * 0.3
+            
+        weighted_score += score * weight
+        total_weight += weight
+    
+    return (weighted_score / total_weight) - 0.5
+
+def adapt_response_style(user_type, learning_progress):
+    style_adjustments = {
+        'ESTRUCTURADO': {
+            'struggling': 'Divide la explicación en pasos numerados y usa ejemplos concretos.',
+            'stable': 'Mantén una estructura clara y organizada.',
+            'advancing': 'Incluye conexiones entre conceptos y profundiza en detalles.'
+        },
+        'EXPLORADOR': {
+            'struggling': 'Usa analogías y ejemplos de la vida real.',
+            'stable': 'Combina diferentes perspectivas y enfoques.',
+            'advancing': 'Propón retos y preguntas para exploración adicional.'
+        },
+        'INTENSIVO': {
+            'struggling': 'Focaliza en los conceptos esenciales.',
+            'stable': 'Mantén un ritmo desafiante pero manejable.',
+            'advancing': 'Profundiza en aspectos avanzados y casos especiales.'
+        }
+    }
+    
+    learning_state = learning_progress.get('learning_style', 'stable')
+    return style_adjustments.get(user_type, {}).get(learning_state, 'Adapta el contenido al nivel del usuario.')
+
 def get_tailored_prompt(user_type, message, user_progress, similar_interactions):
     base_system_prompt = '''
     Eres un tutor de IA especializado en educación. Debes responder en español y adaptar tu estilo según el tipo de estudiante.
     '''
     
-    if user_progress.get('learning_style') == 'struggling':
-        base_system_prompt += '''
-        El estudiante está mostrando dificultades:
-        - Simplifica las explicaciones
-        - Usa más ejemplos
-        - Divide la información en pasos más pequeños
-        - Ofrece más apoyo y ánimo
-        '''
-    elif user_progress.get('learning_style') == 'advancing':
-        base_system_prompt += '''
-        El estudiante está progresando bien:
-        - Introduce conceptos más avanzados
-        - Proporciona retos adicionales
-        - Profundiza en los temas
-        - Fomenta el pensamiento crítico
-        '''
+    response_style = adapt_response_style(user_type, user_progress)
+    base_system_prompt += f"\nEstilo de respuesta: {response_style}\n"
+    
+    complexity = calculate_response_complexity(user_progress, 
+                                            user_progress.get('mastery_scores', {}).get(user_progress.get('preferred_topics', ['general'])[0], 0))
+    base_system_prompt += f"\nNivel de complejidad sugerido: {complexity}/5\n"
     
     if similar_interactions:
-        base_system_prompt += f'''
-        Temas relacionados anteriormente discutidos:
-        {', '.join([f"{i['question']} (Comprensión: {i['understanding']}/5)" for i in similar_interactions])}
+        base_system_prompt += '''
+        Interacciones previas relacionadas:
         '''
+        for interaction in similar_interactions:
+            base_system_prompt += f"- Pregunta: {interaction['question']}\n"
+            base_system_prompt += f"  Comprensión: {interaction['understanding']}/5\n"
     
     mastery_scores = user_progress.get('mastery_scores', {})
     if mastery_scores:
@@ -271,22 +320,27 @@ def chat(current_user):
     
     if not message and not file:
         return jsonify({'error': 'No se proporcionó ningún mensaje o archivo'}), 400
-        
+    
     file_info = ""
     if file and file.filename:
         filename = secure_filename(file.filename)
         file_info = f"\nArchivo adjunto: {filename}"
-        
+    
     processed_message = preprocess_text(message + file_info if file_info else message)
     
     user_progress = analyze_user_progress(current_user.id)
-    
     similar_interactions = find_similar_questions(processed_message, current_user.id)
     
-    user_type = current_user.user_type
-    messages = get_tailored_prompt(user_type, processed_message, user_progress, similar_interactions)
-
+    topics = extract_topics(processed_message)
+    main_topic = topics[0] if topics else "general"
+    current_mastery = user_progress['mastery_scores'].get(main_topic, 0)
+    
     try:
+        messages = get_tailored_prompt(current_user.user_type, 
+                                     processed_message,
+                                     user_progress,
+                                     similar_interactions)
+        
         chat_response = mistral_client.chat(
             model="mistral-tiny",
             messages=messages,
@@ -294,35 +348,40 @@ def chat(current_user):
             max_tokens=500
         )
         ai_response = chat_response.choices[0].message.content
-
-        topics = extract_topics(processed_message)
-        main_topic = topics[0] if topics else "general"
+        
+        complexity_level = calculate_response_complexity(user_progress, current_mastery)
         
         current_user.interaction_count += 1
         
-        response_time = time.time() - start_time
+        recent_chats = ChatHistory.query.filter_by(
+            user_id=current_user.id,
+            topic=main_topic
+        ).order_by(ChatHistory.timestamp.desc()).limit(5).all()
         
-        # Calculate mastery level based on previous interactions
-        topic_mastery = user_progress['mastery_scores'].get(main_topic, 0)
+        mastery_adjustment = calculate_mastery_adjustment(recent_chats, main_topic)
+        new_mastery = max(0, min(1, current_mastery + mastery_adjustment))
         
         chat_entry = ChatHistory(
             user_id=current_user.id,
             message=message + file_info if file_info else message,
             response=ai_response,
-            complexity_level=user_progress['avg_complexity'],
             topic=main_topic,
-            response_time=response_time,
+            complexity_level=complexity_level,
+            response_time=time.time() - start_time,
             preferred_pace=user_progress['learning_pace'],
-            mastery_level=topic_mastery
+            mastery_level=new_mastery,
+            session_duration=0
         )
+        
         db.session.add(chat_entry)
         db.session.commit()
-
+        
         return jsonify({
             'response': ai_response,
             'chat_id': chat_entry.id,
-            'complexity_level': user_progress['avg_complexity']
+            'complexity_level': complexity_level
         }), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
