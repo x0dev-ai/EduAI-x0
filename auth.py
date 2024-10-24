@@ -19,14 +19,13 @@ def generate_token(user_id):
             'iat': datetime.datetime.utcnow(),
             'sub': user_id
         }
-        # Use proper JWT encoding without any character replacements
         return jwt.encode(
             payload,
             current_app.config.get('SECRET_KEY'),
             algorithm='HS256'
-        ).replace('|', '')  # Remove any pipe characters if they appear
+        ).replace('|', '')
     except Exception as e:
-        print(f"Token generation error: {str(e)}")  # Log the error
+        print(f"Token generation error: {str(e)}")
         raise Exception(f"Error generating token: {str(e)}")
 
 def token_required(f):
@@ -68,18 +67,23 @@ def get_token():
         # Create new user with default values
         new_user = User(
             email=email,
-            questionnaire_completed=False,
-            user_type=None
+            questionnaire_completed=False,  # Explicitly set to False for new users
+            user_type=None,
+            learning_difficulty=None,
+            difficulty_details=None
         )
         
-        # Generate token before adding to database
         try:
             db.session.add(new_user)
             db.session.flush()  # Get the ID without committing
             token = generate_token(new_user.id)
             new_user.token = token
             db.session.commit()
-            return jsonify({'token': token}), 201
+            return jsonify({
+                'token': token,
+                'questionnaire_completed': False,  # Include flag in response
+                'redirect': '/questionnaire'  # Add redirect path
+            }), 201
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
@@ -103,20 +107,37 @@ def login():
         
         try:
             # Verify token is valid JWT
-            jwt.decode(token, current_app.config.get('SECRET_KEY'), algorithms=["HS256"])
+            decoded = jwt.decode(token, current_app.config.get('SECRET_KEY'), algorithms=["HS256"])
+            user = User.query.filter_by(token=token).first()
+            
+            if not user:
+                return jsonify({'error': 'User not found with this token'}), 401
+
+            # Return questionnaire state and appropriate redirect
+            redirect_path = '/dashboard' if user.questionnaire_completed else '/questionnaire'
+            
+            return jsonify({
+                'message': 'Login successful',
+                'questionnaire_completed': user.questionnaire_completed,
+                'redirect': redirect_path,
+                'user_type': user.user_type
+            }), 200
+            
         except jwt.InvalidTokenError:
             return jsonify({'error': 'Invalid token format'}), 401
-
-        user = User.query.filter_by(token=token).first()
-        if not user:
-            return jsonify({'error': 'User not found with this token'}), 401
-
-        return jsonify({
-            'message': 'Login successful',
-            'questionnaire_completed': user.questionnaire_completed
-        }), 200
 
     except SQLAlchemyError as e:
         return jsonify({'error': f'Database error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@auth_bp.route('/check_questionnaire_status', methods=['GET'])
+@token_required
+def check_questionnaire_status(current_user):
+    try:
+        return jsonify({
+            'questionnaire_completed': current_user.questionnaire_completed,
+            'redirect': '/dashboard' if current_user.questionnaire_completed else '/questionnaire'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

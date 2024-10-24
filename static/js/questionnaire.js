@@ -7,9 +7,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.getElementById('progressBar');
     
     let currentSection = 0;
+    let sectionValidations = new Array(sections.length).fill(false);
     
     function showSection(index) {
         if (!sections || !sections.length) return;
+        
+        // Ensure we can't skip sections
+        if (index > 0 && !sectionValidations[index - 1]) {
+            showError('Por favor, complete la sección anterior antes de continuar.');
+            return;
+        }
         
         sections.forEach((section, i) => {
             if (section) {
@@ -25,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
             nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
         }
         if (submitBtn) {
-            submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
+            submitBtn.style.display = index === sections.length - 1 && sectionValidations[index] ? 'block' : 'none';
         }
         
         // Update progress bar
@@ -37,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         currentSection = index;
+        saveCurrentState();
     }
 
     // Handle learning difficulty selection
@@ -54,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (this.value === 'dislexia') {
                 dyslexiaQuestions.style.display = 'block';
             }
+            validateSection(currentSection);
         });
     });
     
@@ -61,44 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sections || !sections[index]) return false;
         
         const section = sections[index];
-        const learningDifficulty = section.querySelector('input[name="learning_difficulty"]:checked');
-        
-        // If this is the learning difficulties section
-        if (section.id === 'section5') {
-            // First validate the main selection
-            if (!learningDifficulty) {
-                alert('Por favor, selecciona una opción de dificultad de aprendizaje.');
-                return false;
-            }
-            
-            // If TDAH is selected, validate TDAH questions
-            if (learningDifficulty.value === 'TDAH') {
-                const tdahQuestions = section.querySelectorAll('#tdahQuestions select');
-                for (const select of tdahQuestions) {
-                    if (!select.value) {
-                        alert('Por favor, completa todas las preguntas específicas para TDAH.');
-                        return false;
-                    }
-                }
-            }
-            
-            // If Dislexia is selected, validate Dislexia questions
-            if (learningDifficulty.value === 'dislexia') {
-                const dyslexiaQuestions = section.querySelectorAll('#dyslexiaQuestions select');
-                for (const select of dyslexiaQuestions) {
-                    if (!select.value) {
-                        alert('Por favor, completa todas las preguntas específicas para Dislexia.');
-                        return false;
-                    }
-                }
-            }
-            
-            return true;
-        }
-        
-        // For other sections, keep existing validation
         const inputs = section.querySelectorAll('input[type="radio"], select');
         const groups = new Set();
+        let isValid = true;
         
         inputs.forEach(input => {
             if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
@@ -109,12 +83,103 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const group of groups) {
             const selectedInput = section.querySelector(`input[name="${group}"]:checked, select[name="${group}"]`);
             if (!selectedInput || !selectedInput.value) {
-                alert('Por favor, responde todas las preguntas visibles de esta sección.');
-                return false;
+                isValid = false;
+                break;
             }
         }
-        return true;
+
+        // Special validation for learning difficulties section
+        if (section.id === 'section5') {
+            const learningDifficulty = section.querySelector('input[name="learning_difficulty"]:checked');
+            if (!learningDifficulty) {
+                isValid = false;
+            } else {
+                if (learningDifficulty.value === 'TDAH') {
+                    const tdahQuestions = section.querySelectorAll('#tdahQuestions select');
+                    tdahQuestions.forEach(select => {
+                        if (!select.value) isValid = false;
+                    });
+                } else if (learningDifficulty.value === 'dislexia') {
+                    const dyslexiaQuestions = section.querySelectorAll('#dyslexiaQuestions select');
+                    dyslexiaQuestions.forEach(select => {
+                        if (!select.value) isValid = false;
+                    });
+                }
+            }
+        }
+
+        sectionValidations[index] = isValid;
+        updateButtons();
+        return isValid;
     }
+    
+    function updateButtons() {
+        if (nextBtn) {
+            nextBtn.disabled = !sectionValidations[currentSection];
+        }
+        if (submitBtn && currentSection === sections.length - 1) {
+            submitBtn.style.display = sectionValidations[currentSection] ? 'block' : 'none';
+        }
+    }
+    
+    function saveCurrentState() {
+        const formData = {};
+        const inputs = form.querySelectorAll('input[type="radio"]:checked, select');
+        inputs.forEach(input => {
+            formData[input.name] = input.value;
+        });
+        sessionStorage.setItem('questionnaireState', JSON.stringify({
+            currentSection,
+            formData,
+            sectionValidations
+        }));
+    }
+    
+    function restoreState() {
+        const savedState = sessionStorage.getItem('questionnaireState');
+        if (savedState) {
+            try {
+                const state = JSON.parse(savedState);
+                currentSection = state.currentSection || 0;
+                sectionValidations = state.sectionValidations || new Array(sections.length).fill(false);
+                
+                // Restore form values
+                if (state.formData) {
+                    Object.entries(state.formData).forEach(([name, value]) => {
+                        const input = form.querySelector(`[name="${name}"]`);
+                        if (input) {
+                            if (input.type === 'radio') {
+                                const radio = form.querySelector(`[name="${name}"][value="${value}"]`);
+                                if (radio) radio.checked = true;
+                            } else {
+                                input.value = value;
+                            }
+                        }
+                    });
+                }
+                
+                showSection(currentSection);
+                validateSection(currentSection);
+            } catch (error) {
+                console.error('Error restoring state:', error);
+                sessionStorage.removeItem('questionnaireState');
+                showSection(0);
+            }
+        } else {
+            showSection(0);
+        }
+    }
+    
+    // Add input event listeners for validation
+    sections.forEach((section, index) => {
+        const inputs = section.querySelectorAll('input[type="radio"], select');
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                validateSection(index);
+                saveCurrentState();
+            });
+        });
+    });
     
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
@@ -128,6 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.addEventListener('click', () => {
             if (validateSection(currentSection)) {
                 showSection(currentSection + 1);
+            } else {
+                showError('Por favor, completa todas las preguntas de esta sección antes de continuar.');
             }
         });
     }
@@ -137,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             if (!validateSection(currentSection)) {
+                showError('Por favor, completa todas las preguntas antes de enviar.');
                 return;
             }
             
@@ -179,16 +247,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Show initial section
-    if (sections && sections.length > 0) {
-        showSection(0);
-    }
+    // Initialize the form
+    restoreState();
 });
+
+function showError(message) {
+    const errorToast = document.getElementById('errorToast');
+    if (errorToast) {
+        const errorBody = errorToast.querySelector('.toast-body');
+        errorBody.textContent = message;
+        const toast = new bootstrap.Toast(errorToast);
+        toast.show();
+    } else {
+        alert(message);
+    }
+}
 
 function submitQuestionnaire(formData) {
     const token = localStorage.getItem('token');
     if (!token) {
-        alert('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
+        showError('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
         window.location.href = '/';
         return;
     }
@@ -203,12 +281,16 @@ function submitQuestionnaire(formData) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor: ' + response.status);
+            return response.json().then(data => {
+                throw new Error(data.error || 'Error en la respuesta del servidor');
+            });
         }
         return response.json();
     })
     .then(data => {
         if (data.user_type) {
+            // Clear questionnaire state before redirecting
+            sessionStorage.removeItem('questionnaireState');
             alert('Cuestionario enviado exitosamente. Tu perfil de aprendizaje ha sido identificado.');
             window.location.href = '/dashboard';
         } else {
@@ -217,7 +299,7 @@ function submitQuestionnaire(formData) {
     })
     .catch((error) => {
         console.error('Error:', error);
-        alert('Error al enviar el cuestionario: ' + error.message);
+        showError('Error al enviar el cuestionario: ' + error.message);
         if (error.message.includes('401')) {
             window.location.href = '/';
         }
