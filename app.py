@@ -1,45 +1,50 @@
 import os
-from datetime import timedelta
 from flask import Flask, render_template
-from flask_jwt_extended import JWTManager
-from database import db
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 
-# create the app
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
 app = Flask(__name__)
-
-# setup configurations
-app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY") or "a secret key"
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "eduai_companion_secret_key"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
-app.config['JWT_SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY")
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-
-# initialize extensions
 db.init_app(app)
-jwt = JWTManager(app)
+
+with app.app_context():
+    import models
+    import auth
+    import questionnaire
+    import chatbot
+    db.drop_all()  # Drop all existing tables
+    db.create_all()  # Create new tables with updated schema
 
 # Register blueprints
 from auth import auth_bp
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
+from questionnaire import questionnaire_bp
+from chatbot import chatbot_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(questionnaire_bp)
+app.register_blueprint(chatbot_bp)
 
 @app.route('/')
-def auth_page():
-    return render_template('auth.html')
+def index():
+    return render_template('index.html')
 
-def init_db():
-    with app.app_context():
-        # Drop all tables to ensure clean slate
-        db.drop_all()
-        # Import models and create tables
-        import models
-        db.create_all()
-        print("Database tables created successfully!")
+@app.route('/questionnaire')
+def questionnaire():
+    return render_template('questionnaire.html')
 
-# Initialize database
-init_db()
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
