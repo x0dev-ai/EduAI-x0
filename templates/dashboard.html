@@ -1,44 +1,117 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Perfil de Usuario</h5>
-                <p><strong>Correo:</strong> <span id="userEmail"></span></p>
-                <p><strong>Tipo de Usuario:</strong> <span id="userType"></span></p>
-                <div id="userTypeDescription"></div>
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Profile Summary Card -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Resumen del Perfil de Aprendizaje
+                    </h5>
+                    <p class="text-muted mb-2">Tu progreso y estilo de aprendizaje personalizado</p>
+                    <div class="d-flex align-items-center mb-3">
+                        <div>
+                            <p class="mb-1">Estilo de aprendizaje:</p>
+                            <span class="badge bg-dark" id="learningStyle">ESTRUCTURADO</span>
+                        </div>
+                    </div>
+                    <div class="progress mb-3">
+                        <div id="profileProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations Card -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Recomendaciones Personalizadas
+                    </h5>
+                    <p class="text-muted mb-3">Sugerencias basadas en tu estilo de aprendizaje</p>
+                    <ul class="list-unstyled" id="recommendationsList">
+                        <!-- Recommendations will be added here dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study Schedule Card -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-calendar3 me-2"></i>
+                        Horario Sugerido de Estudio
+                    </h5>
+                    <p class="text-muted mb-3">Organiza tu tiempo de manera efectiva</p>
+                    <div id="scheduleList">
+                        <!-- Schedule will be added here dynamically -->
+                    </div>
+                    <p class="text-muted mt-3">
+                        <small>Mantén sesiones regulares y bien estructuradas para maximizar tu aprendizaje.</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Card -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Progreso del Usuario
+                    </h5>
+                    <p class="text-muted mb-3">Tu avance en el cuestionario</p>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span>Preguntas completadas:</span>
+                        <span class="badge bg-primary" id="completedQuestions">0</span>
+                    </div>
+                    <div id="progressDetails">
+                        <!-- Progress details will be added here dynamically -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Chat con EduAI</h5>
-                <div id="chatMessages" class="chat-container mb-3"></div>
-                <form id="chatForm">
-                    <div class="input-group">
-                        <input type="text" id="messageInput" class="form-control" placeholder="Escribe tu pregunta..." aria-label="Mensaje">
-                        <label class="btn btn-outline-secondary" for="fileInput">
-                            <i class="fas fa-paperclip"></i>
-                            <input type="file" id="fileInput" style="display: none">
-                        </label>
-                        <button class="btn btn-primary" type="submit" id="sendButton">Enviar</button>
-                    </div>
-                    <div id="filePreview" class="mt-2" style="display: none;">
-                        <small class="text-muted">Archivo adjunto: <span id="fileName"></span></small>
-                        <button type="button" class="btn btn-sm btn-link text-danger" id="removeFile">Eliminar</button>
-                    </div>
-                    <div class="form-text text-muted mt-2">
-                        Escribe tu pregunta y presiona Enviar para recibir ayuda personalizada.
-                    </div>
-                </form>
+
+    <!-- Chat Card -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        Chat con EduAI
+                    </h5>
+                    <div id="chatMessages" class="chat-container mb-3"></div>
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <input type="text" id="messageInput" class="form-control" placeholder="Escribe tu pregunta..." aria-label="Mensaje">
+                            <label class="btn btn-outline-secondary" for="fileInput">
+                                <i class="fas fa-paperclip"></i>
+                                <input type="file" id="fileInput" style="display: none">
+                            </label>
+                            <button class="btn btn-primary" type="submit" id="sendButton">Enviar</button>
+                        </div>
+                        <div id="filePreview" class="mt-2" style="display: none;">
+                            <small class="text-muted">Archivo adjunto: <span id="fileName"></span></small>
+                            <button type="button" class="btn btn-sm btn-link text-danger" id="removeFile">Eliminar</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header bg-danger text-white">
