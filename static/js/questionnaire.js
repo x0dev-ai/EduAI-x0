@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update buttons
+        // Update buttons visibility
         if (prevBtn) {
             prevBtn.style.display = index === 0 ? 'none' : 'block';
         }
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
             nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
         }
         if (submitBtn) {
-            submitBtn.style.display = index === sections.length - 1 && sectionValidations[index] ? 'block' : 'none';
+            submitBtn.style.display = (index === sections.length - 1 && sectionValidations[index]) ? 'block' : 'none';
         }
         
         // Update progress bar
@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentSection = index;
         saveCurrentState();
+        validateSection(currentSection); // Validate current section to update button states
     }
 
     // Handle learning difficulty selection
