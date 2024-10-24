@@ -9,16 +9,18 @@ auth_bp = Blueprint('auth', __name__)
 def register():
     data = request.get_json()
     
+    if not all(k in data for k in ['username', 'email', 'password']):
+        return jsonify({"error": "Missing required fields"}), 400
+    
     if User.query.filter_by(username=data['username']).first():
         return jsonify({"error": "Username already exists"}), 400
     
     if User.query.filter_by(email=data['email']).first():
         return jsonify({"error": "Email already exists"}), 400
     
-    user = User(
-        username=data['username'],
-        email=data['email']
-    )
+    user = User()
+    user.username = data['username']
+    user.email = data['email']
     user.set_password(data['password'])
     
     db.session.add(user)
@@ -29,6 +31,10 @@ def register():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
+    
+    if not all(k in data for k in ['username', 'password']):
+        return jsonify({"error": "Missing required fields"}), 400
+    
     user = User.query.filter_by(username=data['username']).first()
     
     if user and user.check_password(data['password']):
@@ -45,4 +51,6 @@ def login():
 def profile():
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
     return jsonify(user.to_dict()), 200
