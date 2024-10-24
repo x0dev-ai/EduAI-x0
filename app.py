@@ -29,9 +29,17 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 def auth_page():
     return render_template('auth.html')
 
-with app.app_context():
-    import models
-    db.create_all()
+def init_db():
+    with app.app_context():
+        # Drop all tables to ensure clean slate
+        db.drop_all()
+        # Import models and create tables
+        import models
+        db.create_all()
+        print("Database tables created successfully!")
+
+# Initialize database
+init_db()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
