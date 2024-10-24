@@ -1,50 +1,37 @@
 import os
+from datetime import timedelta
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
+from flask_jwt_extended import JWTManager
+from database import db
 
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
-
+# create the app
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "eduai_companion_secret_key"
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+
+# setup configurations
+app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY") or "a secret key"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
-db.init_app(app)
+app.config['JWT_SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY")
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 
-with app.app_context():
-    import models
-    import auth
-    import questionnaire
-    import chatbot
-    db.drop_all()  # Drop all existing tables
-    db.create_all()  # Create new tables with updated schema
+# initialize extensions
+db.init_app(app)
+jwt = JWTManager(app)
 
 # Register blueprints
 from auth import auth_bp
-from questionnaire import questionnaire_bp
-from chatbot import chatbot_bp
-
-app.register_blueprint(auth_bp)
-app.register_blueprint(questionnaire_bp)
-app.register_blueprint(chatbot_bp)
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def auth_page():
+    return render_template('auth.html')
 
-@app.route('/questionnaire')
-def questionnaire():
-    return render_template('questionnaire.html')
-
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
+with app.app_context():
+    import models
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
