@@ -72,12 +72,13 @@
         </div>
 
         <!-- Chat Card -->
-        <div class="col-12">
+        <div class="col-12" id="chatSection" style="display: none;">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">
                         <i class="bi bi-chat-dots me-2"></i>
                         Chat con EduAI
+                        <button type="button" class="btn-close float-end" aria-label="Close" onclick="toggleChat(false)"></button>
                     </h5>
                     <div id="chatMessages" class="chat-container mb-3"></div>
                     <form id="chatForm">
@@ -97,6 +98,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Chat Access Button -->
+    <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000;">
+        <button class="btn btn-primary btn-lg rounded-circle shadow-lg" onclick="toggleChat(true)">
+            <i class="bi bi-chat-dots-fill"></i>
+        </button>
     </div>
 </div>
 
