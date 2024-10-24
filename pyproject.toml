@@ -15,5 +15,4 @@ dependencies = [
     "nltk>=3.9.1",
     "numpy",
     "werkzeug>=3.0.4",
-    "textblob>=0.18.0.post0",
 ]
