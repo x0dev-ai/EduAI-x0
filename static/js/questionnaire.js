@@ -16,35 +16,22 @@ document.addEventListener('DOMContentLoaded', function() {
     learningDifficultyInputs.forEach(input => {
         input.addEventListener('change', function() {
             // Hide both sections first
-            tdahSection.style.display = 'none';
-            dyslexiaSection.style.display = 'none';
+            if (tdahSection) tdahSection.style.display = 'none';
+            if (dyslexiaSection) dyslexiaSection.style.display = 'none';
 
             // Show relevant section based on selection
-            if (this.value === 'TDAH') {
+            if (this.value === 'TDAH' && tdahSection) {
                 tdahSection.style.display = 'block';
-            } else if (this.value === 'Dislexia') {
+            } else if (this.value === 'Dislexia' && dyslexiaSection) {
                 dyslexiaSection.style.display = 'block';
             }
         });
     });
     
     function showSection(index) {
-        // Don't allow skipping to later sections
-        if (index > 0 && !validatePreviousSections(index)) {
-            showError('Por favor complete las secciones anteriores primero');
-            return;
-        }
-        
         sections.forEach((section, i) => {
-            if (section) {
-                section.style.display = i === index ? 'block' : 'none';
-            }
+            section.style.display = i === index ? 'block' : 'none';
         });
-        
-        // Update buttons and progress
-        prevBtn.style.display = index === 0 ? 'none' : 'block';
-        nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
-        submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
         
         // Update progress bar
         const progress = ((index + 1) / sections.length) * 100;
@@ -52,17 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
         progressBar.textContent = `${Math.round(progress)}%`;
         progressBar.setAttribute('aria-valuenow', progress);
         
+        // Show/hide navigation buttons
+        prevBtn.style.display = index === 0 ? 'none' : 'block';
+        nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
+        submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
+        
         currentSection = index;
-    }
-    
-    // Add function to validate previous sections
-    function validatePreviousSections(currentIndex) {
-        for (let i = 0; i < currentIndex; i++) {
-            if (!validateSection(i)) {
-                return false;
-            }
-        }
-        return true;
     }
     
     function validateSection(index) {
@@ -114,33 +96,11 @@ document.addEventListener('DOMContentLoaded', function() {
             learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value,
             learning_difficulty: form.querySelector('input[name="learning_difficulty"]:checked')?.value
         };
-
-        // Add TDAH responses if applicable
-        if (formData.learning_difficulty === 'TDAH') {
-            formData.tdah_responses = {
-                attention: form.querySelector('input[name="tdah_attention"]:checked')?.value,
-                distraction: form.querySelector('input[name="tdah_distraction"]:checked')?.value,
-                physical: form.querySelector('input[name="tdah_physical"]:checked')?.value,
-                activities: form.querySelector('input[name="tdah_activities"]:checked')?.value,
-                concentration: form.querySelector('input[name="tdah_concentration"]:checked')?.value
-            };
-        }
-
-        // Add Dyslexia responses if applicable
-        if (formData.learning_difficulty === 'Dislexia') {
-            formData.dyslexia_responses = {
-                reading: form.querySelector('input[name="dyslexia_reading"]:checked')?.value,
-                content: form.querySelector('input[name="dyslexia_content"]:checked')?.value,
-                organization: form.querySelector('input[name="dyslexia_organization"]:checked')?.value,
-                speed: form.querySelector('input[name="dyslexia_speed"]:checked')?.value,
-                comprehension: form.querySelector('input[name="dyslexia_comprehension"]:checked')?.value
-            };
-        }
         
         submitQuestionnaire(formData);
     });
     
-    // Ensure we start at section 0
+    // Start at section 0
     showSection(0);
 });
 
