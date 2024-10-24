@@ -1,6 +1,9 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+
+# Create db instance without initializing
+db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -41,6 +44,11 @@ class QuestionnaireResponse(db.Model):
     experience_level = db.Column(db.String(1))
     learning_tools = db.Column(db.String(1))
     
+    # Learning Difficulties
+    learning_difficulty = db.Column(db.String(20))
+    tdah_aspects = db.Column(db.JSON)
+    dyslexia_aspects = db.Column(db.JSON)
+    
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 class ChatHistory(db.Model):
@@ -54,7 +62,7 @@ class ChatHistory(db.Model):
     complexity_level = db.Column(db.Integer)  # Track response complexity (1-5)
     user_understanding = db.Column(db.Integer)  # User comprehension level (1-5)
     
-    # New fields for enhanced monitoring
+    # Fields for incremental learning
     response_time = db.Column(db.Float)  # Response time in seconds
     feedback_comments = db.Column(db.Text)  # Detailed user feedback
     learning_progress = db.Column(db.Float)  # Comprehension improvement (-1 to 1)
@@ -62,3 +70,6 @@ class ChatHistory(db.Model):
     session_duration = db.Column(db.Integer)  # Time spent on this interaction
     preferred_pace = db.Column(db.String(20))  # User's learning pace preference
     interaction_quality = db.Column(db.Float)  # Combined quality score (0-1)
+    sentiment_score = db.Column(db.Float)  # Sentiment analysis of user messages (-1 to 1)
+    engagement_score = db.Column(db.Float)  # User engagement level (0-1)
+    concepts_covered = db.Column(db.JSON)  # Key concepts covered in the interaction

@@ -72,6 +72,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Add event listeners for learning difficulty radio buttons
+    document.querySelectorAll('input[name="learning_difficulty"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const tdahQuestions = document.getElementById('tdahQuestions');
+            const dyslexiaQuestions = document.getElementById('dyslexiaQuestions');
+            
+            tdahQuestions.style.display = 'none';
+            dyslexiaQuestions.style.display = 'none';
+            
+            if (this.value === 'TDAH') {
+                tdahQuestions.style.display = 'block';
+            } else if (this.value === 'Dislexia') {
+                dyslexiaQuestions.style.display = 'block';
+            }
+        });
+    });
+    
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -92,8 +109,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 challenges: form.querySelector('input[name="challenges"]:checked')?.value,
                 interest_areas: form.querySelector('input[name="interest_areas"]:checked')?.value,
                 experience_level: form.querySelector('input[name="experience_level"]:checked')?.value,
-                learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value
+                learning_tools: form.querySelector('input[name="learning_tools"]:checked')?.value,
+                learning_difficulty: form.querySelector('input[name="learning_difficulty"]:checked')?.value
             };
+
+            // Add TDAH aspects if applicable
+            if (formData.learning_difficulty === 'TDAH') {
+                formData.tdah_aspects = Array.from(form.querySelectorAll('input[name="tdah_aspects"]:checked'))
+                    .map(checkbox => checkbox.value);
+            }
+
+            // Add Dyslexia aspects if applicable
+            if (formData.learning_difficulty === 'Dislexia') {
+                formData.dyslexia_aspects = Array.from(form.querySelectorAll('input[name="dyslexia_aspects"]:checked'))
+                    .map(checkbox => checkbox.value);
+            }
             
             submitQuestionnaire(formData);
         });
