@@ -99,6 +99,30 @@ def classify_user(responses):
     else:
         scores['intensivo'] += 5
 
+    # Additional classification adjustments based on learning difficulties
+    learning_difficulty = responses.get('learning_difficulty')
+    difficulty_details = responses.get('difficulty_details', {})
+
+    if learning_difficulty == 'TDAH':
+        attention_score = int(difficulty_details.get('attention', 3))
+        concentration_time = int(difficulty_details.get('concentration_time', 3))
+        
+        if attention_score > 3 or concentration_time < 3:
+            scores['estructurado'] += 10
+        
+        if int(difficulty_details.get('activity_preference', 3)) > 3:
+            scores['explorador'] += 5
+
+    elif learning_difficulty == 'dislexia':
+        reading_difficulty = int(difficulty_details.get('reading_difficulty', 3))
+        content_preference = int(difficulty_details.get('content_preference', 3))
+        
+        if reading_difficulty > 3:
+            scores['explorador'] += 10
+        
+        if content_preference > 3:
+            scores['intensivo'] += 5
+
     # Map profile types to user types for chatbot interaction
     profile_type = max(scores.items(), key=lambda x: x[1])[0]
     user_type_mapping = {
@@ -117,19 +141,18 @@ def submit_questionnaire(current_user):
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
-        # Validate required fields
         required_fields = [
             'study_time', 'session_duration', 'learning_pace',
             'learning_style', 'content_format', 'feedback_preference',
             'learning_goals', 'motivators', 'challenges',
-            'interest_areas', 'experience_level', 'learning_tools'
+            'interest_areas', 'experience_level', 'learning_tools',
+            'learning_difficulty'
         ]
         
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing field: {field}'}), 400
 
-        # Create new questionnaire response
         new_response = QuestionnaireResponse(
             user_id=current_user.id,
             study_time=data['study_time'],
@@ -148,7 +171,9 @@ def submit_questionnaire(current_user):
         
         db.session.add(new_response)
         
-        # Determine user type based on responses
+        current_user.learning_difficulty = data['learning_difficulty']
+        current_user.difficulty_details = data.get('difficulty_details', {})
+        
         user_type = classify_user(data)
         current_user.user_type = user_type
         current_user.questionnaire_completed = True
@@ -176,6 +201,8 @@ def get_user_profile(current_user):
     profile = {
         'email': current_user.email,
         'user_type': current_user.user_type,
+        'learning_difficulty': current_user.learning_difficulty,
+        'difficulty_details': current_user.difficulty_details,
         'questionnaire_responses': {
             'study_time': questionnaire.study_time,
             'session_duration': questionnaire.session_duration,
