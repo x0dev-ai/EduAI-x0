@@ -72,6 +72,17 @@ function updateStatistics(data) {
     }
 }
 
+function toggleChat(show) {
+    const chatSection = document.getElementById('chatSection');
+    if (chatSection) {
+        chatSection.style.display = show ? 'block' : 'none';
+        if (show) {
+            chatSection.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('messageInput')?.focus();
+        }
+    }
+}
+
 function setupChatInterface() {
     const chatForm = document.getElementById('chatForm');
     const chatMessages = document.getElementById('chatMessages');

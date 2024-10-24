@@ -33,7 +33,7 @@ main {
     margin-bottom: 0;
 }
 
-/* Rest of the existing styles */
+/* Card styles */
 .card {
     background-color: #1a1f2e;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -52,4 +52,81 @@ main {
     padding: 2rem;
 }
 
-/* Rest of your existing CSS... */
+/* Chat styles */
+.chat-container {
+    height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.chat-message {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    max-width: 80%;
+}
+
+.user-message {
+    background: var(--primary-gradient);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.ai-message {
+    background-color: rgba(255, 255, 255, 0.1);
+    margin-right: auto;
+    border-bottom-left-radius: 0.25rem;
+}
+
+/* Chat button styles */
+.btn-lg.rounded-circle {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: transform var(--transition-speed);
+}
+
+.btn-lg.rounded-circle:hover {
+    transform: scale(1.1);
+}
+
+/* Feedback buttons */
+.feedback-buttons {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.understanding-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.understanding-buttons .btn-group {
+    margin-top: 0.25rem;
+}
+
+/* Toast styles */
+.toast {
+    background-color: #1a1f2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Progress bar */
+.progress {
+    height: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.progress-bar {
+    background: var(--primary-gradient);
+}
