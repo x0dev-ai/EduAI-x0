@@ -29,13 +29,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function showSection(index) {
+        // Don't allow skipping to later sections
+        if (index > 0 && !validatePreviousSections(index)) {
+            showError('Por favor complete las secciones anteriores primero');
+            return;
+        }
+        
         sections.forEach((section, i) => {
             if (section) {
                 section.style.display = i === index ? 'block' : 'none';
             }
         });
         
-        // Update buttons
+        // Update buttons and progress
         prevBtn.style.display = index === 0 ? 'none' : 'block';
         nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
         submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
@@ -47,6 +53,16 @@ document.addEventListener('DOMContentLoaded', function() {
         progressBar.setAttribute('aria-valuenow', progress);
         
         currentSection = index;
+    }
+    
+    // Add function to validate previous sections
+    function validatePreviousSections(currentIndex) {
+        for (let i = 0; i < currentIndex; i++) {
+            if (!validateSection(i)) {
+                return false;
+            }
+        }
+        return true;
     }
     
     function validateSection(index) {
@@ -112,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitQuestionnaire(formData);
     });
     
-    // Show initial section
+    // Ensure we start at section 0
     showSection(0);
 });
 
