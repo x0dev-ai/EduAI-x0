@@ -15,4 +15,9 @@ dependencies = [
     "nltk>=3.9.1",
     "numpy",
     "werkzeug>=3.0.4",
+    "python-jose",
+    "cryptography",
+    "passlib",
+    "python-dotenv",
+    "flask-jwt-extended",
 ]
