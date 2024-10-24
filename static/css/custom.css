@@ -91,6 +91,20 @@ h1 {
     box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
 }
 
+/* Submit button styling */
+#submitBtn {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    border: none;
+}
+
+#submitBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+}
+
 .btn-outline-secondary {
     color: #6b7280;
     border-color: rgba(255, 255, 255, 0.2);
@@ -101,19 +115,6 @@ h1 {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.3);
     color: #fff;
-}
-
-.fa-paperclip {
-    font-size: 1.1rem;
-    color: #ffffff;  /* Make the icon white */
-}
-
-.btn-outline-secondary .fa-paperclip {
-    color: #ffffff;  /* Ensure icon is white even in outline button */
-}
-
-.btn-outline-secondary:hover .fa-paperclip {
-    color: #ffffff;  /* Keep icon white on hover */
 }
 
 /* Mejoras en el chat */
