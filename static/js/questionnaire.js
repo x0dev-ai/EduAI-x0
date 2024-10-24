@@ -31,9 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextBtn) {
             nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
         }
-        if (submitBtn) {
-            submitBtn.style.display = (index === sections.length - 1 && sectionValidations[index]) ? 'block' : 'none';
-        }
         
         // Update progress bar
         if (progressBar) {
@@ -45,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentSection = index;
         saveCurrentState();
-        validateSection(currentSection); // Validate current section to update button states
+        validateSection(currentSection);
     }
 
     // Handle learning difficulty selection
@@ -71,57 +68,89 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sections || !sections[index]) return false;
         
         const section = sections[index];
-        const inputs = section.querySelectorAll('input[type="radio"], select');
-        const groups = new Set();
         let isValid = true;
-        
-        inputs.forEach(input => {
-            if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
-                groups.add(input.name);
-            }
-        });
-        
-        for (const group of groups) {
-            const selectedInput = section.querySelector(`input[name="${group}"]:checked, select[name="${group}"]`);
-            if (!selectedInput || !selectedInput.value) {
-                isValid = false;
-                break;
-            }
-        }
 
-        // Special validation for learning difficulties section
+        // Special validation for learning difficulties section (section5)
         if (section.id === 'section5') {
             const learningDifficulty = section.querySelector('input[name="learning_difficulty"]:checked');
+            
+            // Check if learning difficulty is selected
             if (!learningDifficulty) {
                 isValid = false;
             } else {
+                // If TDAH is selected, validate all TDAH-specific fields
                 if (learningDifficulty.value === 'TDAH') {
-                    const tdahQuestions = section.querySelectorAll('#tdahQuestions select');
-                    tdahQuestions.forEach(select => {
-                        if (!select.value) isValid = false;
+                    const tdahFields = [
+                        'tdah_attention',
+                        'tdah_distraction',
+                        'tdah_physical_restlessness',
+                        'tdah_activity_preference',
+                        'tdah_concentration_time'
+                    ];
+                    
+                    isValid = tdahFields.every(fieldName => {
+                        const select = section.querySelector(`select[name="${fieldName}"]`);
+                        return select && select.value;
                     });
-                } else if (learningDifficulty.value === 'dislexia') {
-                    const dyslexiaQuestions = section.querySelectorAll('#dyslexiaQuestions select');
-                    dyslexiaQuestions.forEach(select => {
-                        if (!select.value) isValid = false;
+                }
+                // If Dislexia is selected, validate all Dislexia-specific fields
+                else if (learningDifficulty.value === 'dislexia') {
+                    const dyslexiaFields = [
+                        'dyslexia_reading_difficulty',
+                        'dyslexia_content_preference',
+                        'dyslexia_organization',
+                        'dyslexia_reading_speed',
+                        'dyslexia_comprehension'
+                    ];
+                    
+                    isValid = dyslexiaFields.every(fieldName => {
+                        const select = section.querySelector(`select[name="${fieldName}"]`);
+                        return select && select.value;
                     });
+                }
+                // If "ninguno" is selected, no additional validation needed
+            }
+        } else {
+            // For other sections, validate all visible radio inputs
+            const inputs = section.querySelectorAll('input[type="radio"]');
+            const groups = new Set();
+            
+            inputs.forEach(input => {
+                if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
+                    groups.add(input.name);
+                }
+            });
+            
+            for (const group of groups) {
+                const selectedInput = section.querySelector(`input[name="${group}"]:checked`);
+                if (!selectedInput) {
+                    isValid = false;
+                    break;
                 }
             }
         }
 
+        // Update section validation state
         sectionValidations[index] = isValid;
-        updateButtons();
+        
+        // Update UI elements based on validation state
+        if (nextBtn) {
+            nextBtn.disabled = !isValid;
+        }
+        if (submitBtn && index === sections.length - 1) {
+            submitBtn.style.display = isValid ? 'block' : 'none';
+        }
+        
         return isValid;
     }
     
-    function updateButtons() {
-        if (nextBtn) {
-            nextBtn.disabled = !sectionValidations[currentSection];
-        }
-        if (submitBtn && currentSection === sections.length - 1) {
-            submitBtn.style.display = sectionValidations[currentSection] ? 'block' : 'none';
-        }
-    }
+    // Add change event listeners for all select fields in TDAH and Dyslexia sections
+    const allSelects = document.querySelectorAll('#tdahQuestions select, #dyslexiaQuestions select');
+    allSelects.forEach(select => {
+        select.addEventListener('change', () => {
+            validateSection(currentSection);
+        });
+    });
     
     function saveCurrentState() {
         const formData = {};
@@ -170,17 +199,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showSection(0);
         }
     }
-    
-    // Add input event listeners for validation
-    sections.forEach((section, index) => {
-        const inputs = section.querySelectorAll('input[type="radio"], select');
-        inputs.forEach(input => {
-            input.addEventListener('change', () => {
-                validateSection(index);
-                saveCurrentState();
-            });
-        });
-    });
     
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {

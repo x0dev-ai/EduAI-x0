@@ -15,14 +15,11 @@ import numpy as np
 import time
 from werkzeug.utils import secure_filename
 
-# Create NLTK data directory
+# Create NLTK data directory and setup
 nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
 os.makedirs(nltk_data_dir, exist_ok=True)
-
-# Set NLTK data path
 nltk.data.path.append(nltk_data_dir)
 
-# Download required NLTK data with error handling
 def download_nltk_data():
     try:
         nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
@@ -33,7 +30,6 @@ def download_nltk_data():
         return False
     return True
 
-# Call download function before setting up the blueprint
 if not download_nltk_data():
     print("Warning: NLTK data download failed, some features may not work properly")
 
@@ -42,7 +38,107 @@ chatbot_bp = Blueprint('chatbot', __name__)
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
+class IncrementalLearningSystem:
+    def __init__(self):
+        self.topic_mastery_threshold = 0.8
+        self.complexity_levels = {
+            1: "básico",
+            2: "intermedio",
+            3: "avanzado",
+            4: "experto",
+            5: "maestro"
+        }
+        
+    def calculate_topic_mastery(self, chat_history):
+        """Calculate mastery level for each topic based on user interactions"""
+        topic_scores = {}
+        
+        for chat in chat_history:
+            if chat.topic not in topic_scores:
+                topic_scores[chat.topic] = []
+            
+            # Calculate interaction score based on multiple factors
+            understanding_score = chat.user_understanding / 5.0 if chat.user_understanding else 0.6
+            helpful_bonus = 0.2 if chat.helpful else -0.1
+            complexity_factor = chat.complexity_level / 5.0 if chat.complexity_level else 0.5
+            
+            interaction_score = (understanding_score + helpful_bonus) * complexity_factor
+            topic_scores[chat.topic].append(interaction_score)
+        
+        # Calculate weighted average for each topic
+        topic_mastery = {}
+        for topic, scores in topic_scores.items():
+            if scores:
+                # Recent scores have more weight
+                weights = np.exp(np.linspace(-1, 0, len(scores)))
+                weights = weights / weights.sum()
+                topic_mastery[topic] = np.average(scores, weights=weights)
+            else:
+                topic_mastery[topic] = 0.0
+                
+        return topic_mastery
+    
+    def adjust_complexity(self, current_complexity, understanding_trend, success_rate):
+        """Adjust content complexity based on user performance"""
+        if understanding_trend > 0.2 and success_rate > 0.7:
+            return min(current_complexity + 1, 5)
+        elif understanding_trend < -0.2 or success_rate < 0.3:
+            return max(current_complexity - 1, 1)
+        return current_complexity
+    
+    def generate_learning_path(self, user_id, target_topic=None):
+        """Generate personalized learning path based on user's progress"""
+        recent_chats = ChatHistory.query.filter_by(user_id=user_id)\
+            .order_by(ChatHistory.timestamp.desc())\
+            .limit(50).all()
+            
+        if not recent_chats:
+            return {
+                'current_level': 1,
+                'recommended_topics': [],
+                'next_complexity': 1
+            }
+            
+        # Calculate topic mastery and performance metrics
+        topic_mastery = self.calculate_topic_mastery(recent_chats)
+        
+        # Calculate understanding trend
+        understanding_scores = [chat.user_understanding for chat in recent_chats if chat.user_understanding]
+        understanding_trend = 0
+        if len(understanding_scores) > 1:
+            understanding_trend = np.polyfit(range(len(understanding_scores)), understanding_scores, 1)[0]
+        
+        # Calculate success rate
+        success_rate = sum(1 for chat in recent_chats if chat.helpful) / len(recent_chats)
+        
+        # Current complexity level
+        current_complexity = recent_chats[0].complexity_level or 1
+        
+        # Adjust complexity based on performance
+        next_complexity = self.adjust_complexity(current_complexity, understanding_trend, success_rate)
+        
+        # Identify topics needing attention
+        weak_topics = [topic for topic, mastery in topic_mastery.items() 
+                      if mastery < self.topic_mastery_threshold]
+        
+        # Generate recommended topics
+        recommended_topics = []
+        if target_topic:
+            recommended_topics.append(target_topic)
+        recommended_topics.extend(weak_topics)
+        
+        return {
+            'current_level': current_complexity,
+            'recommended_topics': recommended_topics[:3],
+            'next_complexity': next_complexity,
+            'topic_mastery': topic_mastery
+        }
+
+# Initialize incremental learning system
+learning_system = IncrementalLearningSystem()
+
 def extract_topics(text):
+    """Extract topics from text using NLP"""
     try:
         tokens = word_tokenize(text.lower())
         stop_words = set(stopwords.words('spanish') + stopwords.words('english'))
@@ -68,9 +164,6 @@ def find_similar_questions(current_question, user_id, limit=5):
     
     previous_questions = [chat.message for chat in history]
     
-    if not previous_questions:
-        return []
-    
     try:
         vectorizer = TfidfVectorizer(stop_words='english')
         all_questions = [current_question] + previous_questions
@@ -93,95 +186,65 @@ def find_similar_questions(current_question, user_id, limit=5):
         print(f"Error finding similar questions: {e}")
         return []
 
-def analyze_user_progress(user_id):
-    """Enhanced analysis of user's learning progress"""
-    recent_chats = ChatHistory.query.filter_by(user_id=user_id)\
-        .order_by(ChatHistory.timestamp.desc())\
-        .limit(20).all()
+def get_tailored_prompt(user_type, message, learning_path, similar_interactions):
+    """Generate a tailored prompt based on user type and learning progress"""
+    base_system_prompt = '''
+    Eres un tutor de IA especializado en educación adaptativa. Debes responder en español y adaptar tu estilo según el perfil del estudiante.
+    '''
     
-    if not recent_chats:
-        return {
-            'avg_complexity': 1,
-            'understanding_level': 3,
-            'preferred_topics': [],
-            'learning_style': 'balanced',
-            'learning_pace': 'normal',
-            'mastery_scores': {}
-        }
-
-    # Calculate basic metrics
-    avg_complexity = sum(chat.complexity_level or 1 for chat in recent_chats) / len(recent_chats)
-    avg_understanding = sum(chat.user_understanding or 3 for chat in recent_chats) / len(recent_chats)
+    complexity_info = f"\nNivel de complejidad actual: {learning_path['current_level']}/5"
+    mastery_info = "\nDominio por tema:\n"
+    for topic, mastery in learning_path.get('topic_mastery', {}).items():
+        mastery_info += f"- {topic}: {mastery:.2f}/1.0\n"
     
-    # Calculate topic mastery scores
-    topic_interactions = {}
-    for chat in recent_chats:
-        if chat.topic not in topic_interactions:
-            topic_interactions[chat.topic] = []
-        topic_interactions[chat.topic].append({
-            'understanding': chat.user_understanding or 3,
-            'helpful': chat.helpful,
-            'timestamp': chat.timestamp
-        })
+    recommendations = "\nTemas recomendados para fortalecer:\n"
+    for topic in learning_path.get('recommended_topics', []):
+        recommendations += f"- {topic}\n"
     
-    mastery_scores = {}
-    for topic, interactions in topic_interactions.items():
-        # Weight recent interactions more heavily
-        total_weight = 0
-        weighted_score = 0
-        for idx, interaction in enumerate(interactions):
-            weight = 1 / (idx + 1)  # More recent interactions get higher weight
-            score = (interaction['understanding'] / 5.0) * (1.5 if interaction['helpful'] else 0.5)
-            weighted_score += score * weight
-            total_weight += weight
-        mastery_scores[topic] = weighted_score / total_weight if total_weight > 0 else 0
-
-    # Analyze learning pace
-    timestamps = [chat.timestamp for chat in recent_chats]
-    if len(timestamps) > 1:
-        time_diffs = [(t2 - t1).total_seconds() / 3600 
-                     for t1, t2 in zip(timestamps[1:], timestamps[:-1])]
-        avg_time_between = np.mean(time_diffs)
-        learning_pace = (
-            'intensive' if avg_time_between < 24 else
-            'regular' if avg_time_between < 72 else
-            'casual'
-        )
-    else:
-        learning_pace = 'normal'
-
-    # Calculate learning style based on interaction patterns
-    if len(recent_chats) > 5:
-        understanding_trend = np.polyfit(range(len(recent_chats)),
-                                       [chat.user_understanding or 3 for chat in recent_chats],
-                                       1)[0]
-        learning_style = (
-            'advancing' if understanding_trend > 0.1 else
-            'stable' if abs(understanding_trend) <= 0.1 else
-            'struggling'
-        )
-    else:
-        learning_style = 'balanced'
-
-    # Get preferred topics
-    topics = []
-    for chat in recent_chats:
-        if chat.helpful:
-            topics.extend(extract_topics(chat.message))
+    context = "\nInteracciones previas relevantes:\n"
+    for idx, interaction in enumerate(similar_interactions, 1):
+        context += f"{idx}. Pregunta similar: {interaction['question']}\n"
+        context += f"   Respuesta exitosa: {interaction['response']}\n"
+        context += f"   Nivel de comprensión: {interaction.get('understanding', 3)}/5\n"
     
-    preferred_topics = [topic for topic, count 
-                       in sorted([(t, topics.count(t)) for t in set(topics)], 
-                               key=lambda x: x[1], 
-                               reverse=True)[:5]]
-
-    return {
-        'avg_complexity': avg_complexity,
-        'understanding_level': avg_understanding,
-        'preferred_topics': preferred_topics,
-        'learning_style': learning_style,
-        'learning_pace': learning_pace,
-        'mastery_scores': mastery_scores
-    }
+    if user_type == 'ESTRUCTURADO':
+        system_prompt = base_system_prompt + f'''
+        Para estudiantes estructurados:
+        - Proporciona explicaciones detalladas y analíticas
+        - Incluye referencias académicas cuando sea relevante
+        - Usa un enfoque sistemático y progresivo
+        {complexity_info}
+        {mastery_info}
+        {recommendations}
+        {context}
+        '''
+    elif user_type == 'EXPLORADOR':
+        system_prompt = base_system_prompt + f'''
+        Para estudiantes exploradores:
+        - Ofrece explicaciones interactivas y prácticas
+        - Fomenta el descubrimiento y la experimentación
+        - Proporciona ejemplos variados y creativos
+        {complexity_info}
+        {mastery_info}
+        {recommendations}
+        {context}
+        '''
+    else:  # INTENSIVO
+        system_prompt = base_system_prompt + f'''
+        Para estudiantes intensivos:
+        - Da explicaciones concisas y directas
+        - Usa ejemplos de la vida real
+        - Divide la información en pasos pequeños
+        {complexity_info}
+        {mastery_info}
+        {recommendations}
+        {context}
+        '''
+    
+    return [
+        ChatMessage(role="system", content=system_prompt),
+        ChatMessage(role="user", content=f"Responde a la siguiente consulta: {message}")
+    ]
 
 def preprocess_text(text):
     """Preprocess input text"""
@@ -198,69 +261,6 @@ def preprocess_text(text):
     for typo, correction in common_typos.items():
         text = text.replace(typo, correction)
     return text
-
-def get_tailored_prompt(user_type, message, user_progress, similar_interactions):
-    """Generate a tailored prompt based on user type and learning progress"""
-    base_system_prompt = '''
-    Eres un tutor de IA especializado en educación. Debes responder en español y adaptar tu estilo según el tipo de estudiante.
-    '''
-    
-    # Add mastery information
-    mastery_info = "\nNiveles de dominio por tema:\n"
-    for topic, score in user_progress['mastery_scores'].items():
-        mastery_info += f"- {topic}: {score:.2f}/1.0\n"
-    
-    # Add context from similar interactions
-    context = "\nContexto de interacciones anteriores relevantes:\n"
-    for idx, interaction in enumerate(similar_interactions, 1):
-        context += f"{idx}. Pregunta similar: {interaction['question']}\n"
-        context += f"   Respuesta exitosa: {interaction['response']}\n"
-        context += f"   Nivel de comprensión: {interaction.get('understanding', 3)}/5\n"
-    
-    analytics = f"""
-    Análisis del progreso del estudiante:
-    - Nivel de complejidad actual: {user_progress['avg_complexity']}/5
-    - Nivel de comprensión: {user_progress['understanding_level']}/5
-    - Patrón de aprendizaje: {user_progress['learning_style']}
-    - Temas preferidos: {', '.join(user_progress['preferred_topics'])}
-    {mastery_info}
-    """
-    
-    if user_type == 'ESTRUCTURADO':
-        system_prompt = base_system_prompt + f'''
-        Para estudiantes estructurados:
-        - Proporciona explicaciones detalladas y analíticas
-        - Incluye referencias académicas cuando sea relevante
-        - Plantea preguntas desafiantes para estimular el pensamiento crítico
-        - Sugiere recursos adicionales avanzados
-        {analytics}
-        {context}
-        '''
-    elif user_type == 'EXPLORADOR':
-        system_prompt = base_system_prompt + f'''
-        Para estudiantes exploradores:
-        - Ofrece explicaciones balanceadas y claras
-        - Incluye ejemplos prácticos
-        - Proporciona pasos intermedios en las explicaciones
-        - Sugiere ejercicios de práctica moderados
-        {analytics}
-        {context}
-        '''
-    else:  # INTENSIVO
-        system_prompt = base_system_prompt + f'''
-        Para estudiantes intensivos:
-        - Da explicaciones simples y directas
-        - Usa muchos ejemplos de la vida cotidiana
-        - Divide la información en pasos pequeños y manejables
-        - Ofrece refuerzo positivo constante
-        {analytics}
-        {context}
-        '''
-    
-    return [
-        ChatMessage(role="system", content=system_prompt),
-        ChatMessage(role="user", content=f"Responde a la siguiente consulta: {message}")
-    ]
 
 @chatbot_bp.route('/chat', methods=['POST'])
 @token_required
@@ -281,15 +281,21 @@ def chat(current_user):
     # Preprocess the input message
     processed_message = preprocess_text(message + file_info if file_info else message)
     
-    # Get user progress and analytics
-    user_progress = analyze_user_progress(current_user.id)
-    
-    # Find similar previous interactions
+    # Extract topics and find similar questions
+    topics = extract_topics(processed_message)
+    main_topic = topics[0] if topics else "general"
     similar_interactions = find_similar_questions(processed_message, current_user.id)
     
-    # Get user type and create tailored messages
-    user_type = current_user.user_type
-    messages = get_tailored_prompt(user_type, processed_message, user_progress, similar_interactions)
+    # Get personalized learning path
+    learning_path = learning_system.generate_learning_path(current_user.id, main_topic)
+    
+    # Get tailored prompt based on user type and learning path
+    messages = get_tailored_prompt(
+        current_user.user_type,
+        processed_message,
+        learning_path,
+        similar_interactions
+    )
 
     try:
         chat_response = mistral_client.chat(
@@ -299,10 +305,6 @@ def chat(current_user):
             max_tokens=500
         )
         ai_response = chat_response.choices[0].message.content
-
-        # Extract topics from the conversation
-        topics = extract_topics(processed_message)
-        main_topic = topics[0] if topics else "general"
         
         # Update user interaction count
         current_user.interaction_count += 1
@@ -315,10 +317,10 @@ def chat(current_user):
             user_id=current_user.id,
             message=message + file_info if file_info else message,
             response=ai_response,
-            complexity_level=user_progress['avg_complexity'],
+            complexity_level=learning_path['next_complexity'],
             topic=main_topic,
             response_time=response_time,
-            preferred_pace=user_progress['learning_pace']
+            mastery_level=learning_path['topic_mastery'].get(main_topic, 0.0)
         )
         db.session.add(chat_entry)
         db.session.commit()
@@ -326,7 +328,7 @@ def chat(current_user):
         return jsonify({
             'response': ai_response,
             'chat_id': chat_entry.id,
-            'complexity_level': user_progress['avg_complexity']
+            'complexity_level': learning_path['next_complexity']
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -372,7 +374,13 @@ def submit_feedback(current_user):
 @chatbot_bp.route('/learning_report', methods=['GET'])
 @token_required
 def get_learning_report(current_user):
-    user_progress = analyze_user_progress(current_user.id)
-    if not user_progress:
-        return jsonify({'error': 'Could not generate learning report'}), 404
-    return jsonify(user_progress), 200
+    """Get detailed learning progress report"""
+    try:
+        learning_path = learning_system.generate_learning_path(current_user.id)
+        return jsonify({
+            'current_level': learning_path['current_level'],
+            'recommended_topics': learning_path['recommended_topics'],
+            'topic_mastery': learning_path['topic_mastery']
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
