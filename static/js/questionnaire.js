@@ -117,12 +117,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add TDAH responses if applicable
         if (formData.learning_difficulty === 'TDAH') {
-            formData.tdah_responses = Array.from(form.querySelectorAll('input[name="tdah_strategies[]"]:checked')).map(input => input.value);
+            formData.tdah_responses = {
+                attention: form.querySelector('input[name="tdah_attention"]:checked')?.value,
+                distraction: form.querySelector('input[name="tdah_distraction"]:checked')?.value,
+                physical: form.querySelector('input[name="tdah_physical"]:checked')?.value,
+                activities: form.querySelector('input[name="tdah_activities"]:checked')?.value,
+                concentration: form.querySelector('input[name="tdah_concentration"]:checked')?.value
+            };
         }
 
         // Add Dyslexia responses if applicable
         if (formData.learning_difficulty === 'Dislexia') {
-            formData.dyslexia_responses = Array.from(form.querySelectorAll('input[name="dyslexia_preferences[]"]:checked')).map(input => input.value);
+            formData.dyslexia_responses = {
+                reading: form.querySelector('input[name="dyslexia_reading"]:checked')?.value,
+                content: form.querySelector('input[name="dyslexia_content"]:checked')?.value,
+                organization: form.querySelector('input[name="dyslexia_organization"]:checked')?.value,
+                speed: form.querySelector('input[name="dyslexia_speed"]:checked')?.value,
+                comprehension: form.querySelector('input[name="dyslexia_comprehension"]:checked')?.value
+            };
         }
         
         submitQuestionnaire(formData);
