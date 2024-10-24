@@ -52,6 +52,39 @@ def extract_topics(text):
         print(f"Error in topic extraction: {e}")
         return [text.lower()]
 
+def calculate_user_progress(user_id):
+    """Calculate user's overall learning progress"""
+    chat_history = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).all()
+    
+    if not chat_history:
+        return 0
+    
+    total_interactions = len(chat_history)
+    weighted_progress = 0
+    
+    for i, chat in enumerate(chat_history):
+        # More recent interactions have higher weight
+        weight = 1 / (i + 1)
+        
+        # Calculate interaction score based on multiple factors
+        interaction_score = 0
+        if chat.helpful:
+            interaction_score += 0.4
+        if chat.user_understanding:
+            interaction_score += (chat.user_understanding / 5) * 0.4
+        if chat.mastery_level:
+            interaction_score += chat.mastery_level * 0.2
+            
+        weighted_progress += interaction_score * weight
+    
+    # Normalize progress to percentage
+    progress = (weighted_progress / (1 if total_interactions == 0 else total_interactions)) * 100
+    return min(round(progress), 100)
+
+def get_completed_questions_count(user_id):
+    """Get count of completed chat interactions"""
+    return ChatHistory.query.filter_by(user_id=user_id).count()
+
 def find_similar_questions(current_question, user_id, limit=5):
     history = ChatHistory.query.filter_by(
         user_id=user_id,
@@ -122,7 +155,7 @@ def analyze_user_progress(user_id):
         total_weight = 0
         weighted_score = 0
         for idx, interaction in enumerate(interactions):
-            weight = 1 / (idx + 1)
+            weight = 1 / (idx + 1)  # More recent interactions have higher weight
             score = (interaction['understanding'] / 5.0) * (1.5 if interaction['helpful'] else 0.5)
             weighted_score += score * weight
             total_weight += weight
@@ -193,51 +226,36 @@ def get_tailored_prompt(user_type, message, user_progress, similar_interactions)
     Eres un tutor de IA especializado en educación. Debes responder en español y adaptar tu estilo según el tipo de estudiante.
     '''
     
-    user = User.query.get(user_progress.get('user_id'))
-    if user:
-        questionnaire = QuestionnaireResponse.query.filter_by(user_id=user.id).first()
-        if questionnaire and questionnaire.learning_difficulty:
-            if questionnaire.learning_difficulty == 'TDAH':
-                base_system_prompt += '''
-                Para estudiantes con TDAH:
-                - Divide la información en bloques cortos y manejables
-                - Usa elementos visuales y ejemplos concretos
-                - Mantén un ritmo dinámico pero estructurado
-                - Proporciona recordatorios y refuerzos frecuentes
-                '''
-            elif questionnaire.learning_difficulty == 'Dislexia':
-                base_system_prompt += '''
-                Para estudiantes con Dislexia:
-                - Usa un lenguaje claro y directo
-                - Evita textos largos y complejos
-                - Proporciona alternativas audiovisuales cuando sea posible
-                - Da tiempo extra para procesar la información
-                '''
+    if user_progress.get('learning_style') == 'struggling':
+        base_system_prompt += '''
+        El estudiante está mostrando dificultades:
+        - Simplifica las explicaciones
+        - Usa más ejemplos
+        - Divide la información en pasos más pequeños
+        - Ofrece más apoyo y ánimo
+        '''
+    elif user_progress.get('learning_style') == 'advancing':
+        base_system_prompt += '''
+        El estudiante está progresando bien:
+        - Introduce conceptos más avanzados
+        - Proporciona retos adicionales
+        - Profundiza en los temas
+        - Fomenta el pensamiento crítico
+        '''
     
-    if user_type == 'ESTRUCTURADO':
-        base_system_prompt += '''
-        Para estudiantes estructurados:
-        - Proporciona explicaciones detalladas y analíticas
-        - Incluye referencias académicas cuando sea relevante
-        - Plantea preguntas desafiantes para estimular el pensamiento crítico
-        - Sugiere recursos adicionales avanzados
+    if similar_interactions:
+        base_system_prompt += f'''
+        Temas relacionados anteriormente discutidos:
+        {', '.join([f"{i['question']} (Comprensión: {i['understanding']}/5)" for i in similar_interactions])}
         '''
-    elif user_type == 'EXPLORADOR':
+    
+    mastery_scores = user_progress.get('mastery_scores', {})
+    if mastery_scores:
         base_system_prompt += '''
-        Para estudiantes exploradores:
-        - Ofrece explicaciones balanceadas y claras
-        - Incluye ejemplos prácticos
-        - Proporciona pasos intermedios en las explicaciones
-        - Sugiere ejercicios de práctica moderados
+        Niveles de dominio por tema:
         '''
-    else:  # INTENSIVO
-        base_system_prompt += '''
-        Para estudiantes intensivos:
-        - Da explicaciones simples y directas
-        - Usa muchos ejemplos de la vida cotidiana
-        - Divide la información en pasos pequeños y manejables
-        - Ofrece refuerzo positivo constante
-        '''
+        for topic, score in mastery_scores.items():
+            base_system_prompt += f"- {topic}: {score * 100:.0f}%\n"
     
     return [
         ChatMessage(role="system", content=base_system_prompt),
@@ -284,6 +302,9 @@ def chat(current_user):
         
         response_time = time.time() - start_time
         
+        # Calculate mastery level based on previous interactions
+        topic_mastery = user_progress['mastery_scores'].get(main_topic, 0)
+        
         chat_entry = ChatHistory(
             user_id=current_user.id,
             message=message + file_info if file_info else message,
@@ -291,7 +312,8 @@ def chat(current_user):
             complexity_level=user_progress['avg_complexity'],
             topic=main_topic,
             response_time=response_time,
-            preferred_pace=user_progress['learning_pace']
+            preferred_pace=user_progress['learning_pace'],
+            mastery_level=topic_mastery
         )
         db.session.add(chat_entry)
         db.session.commit()
@@ -343,7 +365,20 @@ def submit_feedback(current_user):
 @chatbot_bp.route('/learning_report', methods=['GET'])
 @token_required
 def get_learning_report(current_user):
-    user_progress = analyze_user_progress(current_user.id)
-    if not user_progress:
-        return jsonify({'error': 'Could not generate learning report'}), 404
-    return jsonify(user_progress), 200
+    try:
+        user_progress = analyze_user_progress(current_user.id)
+        if not user_progress:
+            return jsonify({'error': 'Could not generate learning report'}), 404
+
+        progress_data = {
+            'progress': calculate_user_progress(current_user.id),
+            'completed_questions': get_completed_questions_count(current_user.id),
+            'learning_style': current_user.user_type,
+            'mastery_scores': user_progress.get('mastery_scores', {}),
+            'preferred_topics': user_progress.get('preferred_topics', []),
+            'understanding_level': user_progress.get('understanding_level', 0),
+            'learning_pace': user_progress.get('learning_pace', 'normal'),
+        }
+        return jsonify(progress_data), 200
+    except Exception as e:
+        return jsonify({'error': f'Error generating learning report: {str(e)}'}), 500

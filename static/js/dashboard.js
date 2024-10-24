@@ -4,28 +4,71 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadUserProfile() {
-    fetch('/get_user_profile', {
-        method: 'GET',
+    fetch('/learning_report', {
         headers: {
             'Authorization': localStorage.getItem('token')
         }
     })
     .then(response => response.json())
     .then(data => {
-        document.getElementById('userEmail').textContent = data.email;
-        document.getElementById('userType').textContent = data.user_type;
-        
-        // Add user type description
-        const typeDescriptions = {
-            'ESTRUCTURADO': 'Recibirás explicaciones detalladas y analíticas para maximizar tu aprendizaje.',
-            'EXPLORADOR': 'Recibirás explicaciones balanceadas con ejemplos prácticos.',
-            'INTENSIVO': 'Recibirás explicaciones claras y paso a paso con ejemplos cotidianos.'
-        };
-        const description = document.getElementById('userTypeDescription');
-        description.innerHTML = `<p class="mt-2"><small class="text-muted">${typeDescriptions[data.user_type] || ''}</small></p>`;
+        // Update profile progress
+        const progressBar = document.getElementById('profileProgress');
+        progressBar.style.width = `${data.progress || 0}%`;
+        progressBar.textContent = `${data.progress || 0}%`;
+
+        // Update learning style
+        const learningStyle = document.getElementById('learningStyle');
+        learningStyle.textContent = data.learning_style || 'No definido';
+
+        // Update recommendations
+        const recommendationsList = document.getElementById('recommendationsList');
+        const recommendations = [
+            'Crea un horario de estudio detallado y síguelo consistentemente',
+            'Utiliza guías paso a paso y materiales bien organizados',
+            'Establece objetivos claros y medibles para cada sesión',
+            'Usa listas de verificación para seguir tu progreso'
+        ];
+        recommendationsList.innerHTML = recommendations.map(rec => 
+            `<li class="mb-2"><i class="bi bi-check2-circle text-success me-2"></i>${rec}</li>`
+        ).join('');
+
+        // Update schedule
+        const scheduleList = document.getElementById('scheduleList');
+        const schedule = [
+            { time: 'Mañana (8:00 - 9:30)', activity: 'Estudio enfocado en nuevos conceptos' },
+            { time: 'Tarde (15:00 - 16:00)', activity: 'Repaso y ejercicios prácticos' },
+            { time: 'Noche (19:00 - 20:00)', activity: 'Organización y planificación' }
+        ];
+        scheduleList.innerHTML = schedule.map(slot => `
+            <div class="mb-2">
+                <strong>${slot.time}:</strong>
+                <span class="text-muted">${slot.activity}</span>
+            </div>
+        `).join('');
+
+        // Update progress
+        document.getElementById('completedQuestions').textContent = data.completed_questions || '0';
+
+        // Update progress details
+        const progressDetails = document.getElementById('progressDetails');
+        if (data.mastery_scores) {
+            const details = Object.entries(data.mastery_scores).map(([topic, score]) => `
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>${topic}</span>
+                        <span class="badge bg-info">${Math.round(score * 100)}%</span>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${score * 100}%"></div>
+                    </div>
+                </div>
+            `).join('');
+            progressDetails.innerHTML = details;
+        }
     })
-    .catch((error) => {
-        showError('Error al cargar el perfil: ' + error.message);
+    .catch(error => {
+        console.error('Error loading learning report:', error);
+        showError('Error al cargar el reporte de aprendizaje');
     });
 }
 
@@ -115,6 +158,7 @@ function setupChatInterface() {
                 throw new Error(data.error);
             }
             showSuccess('¡Gracias por tu feedback!');
+            loadUserProfile(); // Reload profile to update progress
         })
         .catch(error => {
             showError('Error al enviar feedback: ' + error.message);
@@ -139,6 +183,7 @@ function setupChatInterface() {
                 throw new Error(data.error);
             }
             showSuccess('¡Gracias por indicar tu nivel de comprensión!');
+            loadUserProfile(); // Reload profile to update progress
         })
         .catch(error => {
             showError('Error al enviar nivel de comprensión: ' + error.message);
@@ -175,6 +220,9 @@ function setupChatInterface() {
                 const feedbackButtons = createFeedbackButtons(lastChatId);
                 chatMessages.appendChild(feedbackButtons);
             }
+
+            // Update user profile after each interaction
+            loadUserProfile();
         })
         .catch((error) => {
             showError('Error: ' + error.message);
