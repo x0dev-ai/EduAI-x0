@@ -17,27 +17,23 @@ document.addEventListener('DOMContentLoaded', function() {
             login(token);
         });
     }
-
-    // Check if we need to restore any previous questionnaire state
-    const savedQuestionnaireState = sessionStorage.getItem('questionnaireState');
-    if (savedQuestionnaireState && window.location.pathname === '/questionnaire') {
-        try {
-            const state = JSON.parse(savedQuestionnaireState);
-            restoreQuestionnaireState(state);
-        } catch (error) {
-            console.error('Error restoring questionnaire state:', error);
-            sessionStorage.removeItem('questionnaireState');
-        }
-    }
 });
 
-function handleResponse(response) {
-    if (!response.ok) {
-        return response.json().then(data => {
+async function handleResponse(response) {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
             throw new Error(data.error || 'Error del servidor');
-        });
+        }
+        return data;
+    } else {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(text || 'Error del servidor');
+        }
+        return { message: text };
     }
-    return response.json();
 }
 
 function showError(message) {
@@ -66,16 +62,13 @@ async function getToken(email) {
         
         if (data.token) {
             const tokenDisplay = document.getElementById('tokenDisplay');
-            tokenDisplay.textContent = `Token para ${email}: ${data.token}`;
+            tokenDisplay.textContent = 'Tu token: ' + data.token;
             tokenDisplay.style.display = 'block';
             localStorage.setItem('token', data.token);
             
-            // Clear any existing questionnaire state
-            sessionStorage.removeItem('questionnaireState');
-            
             // Add a small delay before redirecting
             setTimeout(() => {
-                window.location.href = data.redirect || '/questionnaire';
+                window.location.href = '/questionnaire';
             }, 3000);
         }
     } catch (error) {
@@ -101,38 +94,10 @@ async function login(token) {
         
         if (data.message === 'Login successful') {
             localStorage.setItem('token', cleanToken);
-            
-            // Clear questionnaire state if going to dashboard
-            if (data.redirect === '/dashboard') {
-                sessionStorage.removeItem('questionnaireState');
-            }
-            
-            window.location.href = data.redirect;
+            window.location.href = data.questionnaire_completed ? '/dashboard' : '/questionnaire';
         }
     } catch (error) {
         console.error('Error:', error);
         showError('Error al iniciar sesión: ' + error.message);
     }
-}
-
-function saveQuestionnaireState(state) {
-    sessionStorage.setItem('questionnaireState', JSON.stringify(state));
-}
-
-function restoreQuestionnaireState(state) {
-    const form = document.getElementById('questionnaireForm');
-    if (!form) return;
-
-    // Restore form values
-    Object.entries(state).forEach(([name, value]) => {
-        const input = form.querySelector(`[name="${name}"]`);
-        if (input) {
-            if (input.type === 'radio') {
-                const radio = form.querySelector(`[name="${name}"][value="${value}"]`);
-                if (radio) radio.checked = true;
-            } else {
-                input.value = value;
-            }
-        }
-    });
 }

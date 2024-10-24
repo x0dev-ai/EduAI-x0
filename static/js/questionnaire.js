@@ -7,16 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.getElementById('progressBar');
     
     let currentSection = 0;
-    let sectionValidations = new Array(sections.length).fill(false);
     
     function showSection(index) {
         if (!sections || !sections.length) return;
-        
-        // Ensure we can't skip sections
-        if (index > 0 && !sectionValidations[index - 1]) {
-            showError('Por favor, complete la sección anterior antes de continuar.');
-            return;
-        }
         
         sections.forEach((section, i) => {
             if (section) {
@@ -24,12 +17,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update buttons visibility
+        // Update buttons
         if (prevBtn) {
             prevBtn.style.display = index === 0 ? 'none' : 'block';
         }
         if (nextBtn) {
             nextBtn.style.display = index === sections.length - 1 ? 'none' : 'block';
+        }
+        if (submitBtn) {
+            submitBtn.style.display = index === sections.length - 1 ? 'block' : 'none';
         }
         
         // Update progress bar
@@ -41,8 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         currentSection = index;
-        saveCurrentState();
-        validateSection(currentSection);
     }
 
     // Handle learning difficulty selection
@@ -60,7 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (this.value === 'dislexia') {
                 dyslexiaQuestions.style.display = 'block';
             }
-            validateSection(currentSection);
         });
     });
     
@@ -68,136 +61,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sections || !sections[index]) return false;
         
         const section = sections[index];
-        let isValid = true;
-
-        // Special validation for learning difficulties section (section5)
-        if (section.id === 'section5') {
-            const learningDifficulty = section.querySelector('input[name="learning_difficulty"]:checked');
-            
-            // Check if learning difficulty is selected
-            if (!learningDifficulty) {
-                isValid = false;
-            } else {
-                // If TDAH is selected, validate all TDAH-specific fields
-                if (learningDifficulty.value === 'TDAH') {
-                    const tdahFields = [
-                        'tdah_attention',
-                        'tdah_distraction',
-                        'tdah_physical_restlessness',
-                        'tdah_activity_preference',
-                        'tdah_concentration_time'
-                    ];
-                    
-                    isValid = tdahFields.every(fieldName => {
-                        const select = section.querySelector(`select[name="${fieldName}"]`);
-                        return select && select.value;
-                    });
-                }
-                // If Dislexia is selected, validate all Dislexia-specific fields
-                else if (learningDifficulty.value === 'dislexia') {
-                    const dyslexiaFields = [
-                        'dyslexia_reading_difficulty',
-                        'dyslexia_content_preference',
-                        'dyslexia_organization',
-                        'dyslexia_reading_speed',
-                        'dyslexia_comprehension'
-                    ];
-                    
-                    isValid = dyslexiaFields.every(fieldName => {
-                        const select = section.querySelector(`select[name="${fieldName}"]`);
-                        return select && select.value;
-                    });
-                }
-                // If "ninguno" is selected, no additional validation needed
-            }
-        } else {
-            // For other sections, validate all visible radio inputs
-            const inputs = section.querySelectorAll('input[type="radio"]');
-            const groups = new Set();
-            
-            inputs.forEach(input => {
-                if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
-                    groups.add(input.name);
-                }
-            });
-            
-            for (const group of groups) {
-                const selectedInput = section.querySelector(`input[name="${group}"]:checked`);
-                if (!selectedInput) {
-                    isValid = false;
-                    break;
-                }
-            }
-        }
-
-        // Update section validation state
-        sectionValidations[index] = isValid;
+        const inputs = section.querySelectorAll('input[type="radio"], select');
+        const groups = new Set();
         
-        // Update UI elements based on validation state
-        if (nextBtn) {
-            nextBtn.disabled = !isValid;
-        }
-        if (submitBtn && index === sections.length - 1) {
-            submitBtn.style.display = isValid ? 'block' : 'none';
-        }
-        
-        return isValid;
-    }
-    
-    // Add change event listeners for all select fields in TDAH and Dyslexia sections
-    const allSelects = document.querySelectorAll('#tdahQuestions select, #dyslexiaQuestions select');
-    allSelects.forEach(select => {
-        select.addEventListener('change', () => {
-            validateSection(currentSection);
-        });
-    });
-    
-    function saveCurrentState() {
-        const formData = {};
-        const inputs = form.querySelectorAll('input[type="radio"]:checked, select');
         inputs.forEach(input => {
-            formData[input.name] = input.value;
-        });
-        sessionStorage.setItem('questionnaireState', JSON.stringify({
-            currentSection,
-            formData,
-            sectionValidations
-        }));
-    }
-    
-    function restoreState() {
-        const savedState = sessionStorage.getItem('questionnaireState');
-        if (savedState) {
-            try {
-                const state = JSON.parse(savedState);
-                currentSection = state.currentSection || 0;
-                sectionValidations = state.sectionValidations || new Array(sections.length).fill(false);
-                
-                // Restore form values
-                if (state.formData) {
-                    Object.entries(state.formData).forEach(([name, value]) => {
-                        const input = form.querySelector(`[name="${name}"]`);
-                        if (input) {
-                            if (input.type === 'radio') {
-                                const radio = form.querySelector(`[name="${name}"][value="${value}"]`);
-                                if (radio) radio.checked = true;
-                            } else {
-                                input.value = value;
-                            }
-                        }
-                    });
-                }
-                
-                showSection(currentSection);
-                validateSection(currentSection);
-            } catch (error) {
-                console.error('Error restoring state:', error);
-                sessionStorage.removeItem('questionnaireState');
-                showSection(0);
+            if (input.style.display !== 'none' && input.closest('div').style.display !== 'none') {
+                groups.add(input.name);
             }
-        } else {
-            showSection(0);
+        });
+        
+        for (const group of groups) {
+            const selectedInput = section.querySelector(`input[name="${group}"]:checked, select[name="${group}"]`);
+            if (!selectedInput || !selectedInput.value) {
+                alert('Por favor, responde todas las preguntas visibles de esta sección.');
+                return false;
+            }
         }
+        return true;
     }
     
     if (prevBtn) {
@@ -212,8 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.addEventListener('click', () => {
             if (validateSection(currentSection)) {
                 showSection(currentSection + 1);
-            } else {
-                showError('Por favor, completa todas las preguntas de esta sección antes de continuar.');
             }
         });
     }
@@ -223,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             if (!validateSection(currentSection)) {
-                showError('Por favor, completa todas las preguntas antes de enviar.');
                 return;
             }
             
@@ -266,26 +143,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize the form
-    restoreState();
-});
-
-function showError(message) {
-    const errorToast = document.getElementById('errorToast');
-    if (errorToast) {
-        const errorBody = errorToast.querySelector('.toast-body');
-        errorBody.textContent = message;
-        const toast = new bootstrap.Toast(errorToast);
-        toast.show();
-    } else {
-        alert(message);
+    // Show initial section
+    if (sections && sections.length > 0) {
+        showSection(0);
     }
-}
+});
 
 function submitQuestionnaire(formData) {
     const token = localStorage.getItem('token');
     if (!token) {
-        showError('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
+        alert('No se encontró el token de autorización. Por favor, inicie sesión nuevamente.');
         window.location.href = '/';
         return;
     }
@@ -300,16 +167,12 @@ function submitQuestionnaire(formData) {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || 'Error en la respuesta del servidor');
-            });
+            throw new Error('Error en la respuesta del servidor: ' + response.status);
         }
         return response.json();
     })
     .then(data => {
         if (data.user_type) {
-            // Clear questionnaire state before redirecting
-            sessionStorage.removeItem('questionnaireState');
             alert('Cuestionario enviado exitosamente. Tu perfil de aprendizaje ha sido identificado.');
             window.location.href = '/dashboard';
         } else {
@@ -318,7 +181,7 @@ function submitQuestionnaire(formData) {
     })
     .catch((error) => {
         console.error('Error:', error);
-        showError('Error al enviar el cuestionario: ' + error.message);
+        alert('Error al enviar el cuestionario: ' + error.message);
         if (error.message.includes('401')) {
             window.location.href = '/';
         }

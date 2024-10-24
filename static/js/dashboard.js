@@ -15,6 +15,7 @@ function loadUserProfile() {
         document.getElementById('userEmail').textContent = data.email;
         document.getElementById('userType').textContent = data.user_type;
         
+        // Add user type description
         const typeDescriptions = {
             'ESTRUCTURADO': 'Recibirás explicaciones detalladas y analíticas para maximizar tu aprendizaje.',
             'EXPLORADOR': 'Recibirás explicaciones balanceadas con ejemplos prácticos.',
@@ -60,67 +61,8 @@ function setupChatInterface() {
         if (message || currentFile) {
             sendMessage(message);
             messageInput.value = '';
-            // Reset file input
-            currentFile = null;
-            fileInput.value = '';
-            filePreview.style.display = 'none';
         }
     });
-
-    function sendMessage(message) {
-        try {
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-            const spinner = sendButton.querySelector('.spinner-border');
-            spinner.classList.remove('d-none');
-
-            displayMessage(message, 'user-message');
-
-            const formData = new FormData();
-            if (message) formData.append('message', message);
-            if (currentFile) formData.append('file', currentFile);
-
-            fetch('/chat', {
-                method: 'POST',
-                headers: {
-                    'Authorization': localStorage.getItem('token')
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                displayMessage(data.response, 'ai-message');
-                lastChatId = data.chat_id;
-                
-                if (lastChatId) {
-                    const feedbackButtons = createFeedbackButtons(lastChatId);
-                    chatMessages.appendChild(feedbackButtons);
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                showError('Error al enviar el mensaje: ' + error.message);
-                displayMessage('Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.', 'error-message');
-            })
-            .finally(() => {
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                spinner.classList.add('d-none');
-                sendButton.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span> Enviar';
-                messageInput.focus();
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            showError('Error al enviar el mensaje: ' + error.message);
-        } finally {
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            sendButton.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span> Enviar';
-        }
-    }
 
     function createFeedbackButtons(chatId) {
         const feedbackDiv = document.createElement('div');
@@ -200,6 +142,52 @@ function setupChatInterface() {
         })
         .catch(error => {
             showError('Error al enviar nivel de comprensión: ' + error.message);
+        });
+    }
+
+    function sendMessage(message) {
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+
+        displayMessage(message, 'user-message');
+
+        const formData = new FormData();
+        if (message) formData.append('message', message);
+        if (currentFile) formData.append('file', currentFile);
+
+        fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Authorization': localStorage.getItem('token')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            displayMessage(data.response, 'ai-message');
+            lastChatId = data.chat_id;
+            
+            if (lastChatId) {
+                const feedbackButtons = createFeedbackButtons(lastChatId);
+                chatMessages.appendChild(feedbackButtons);
+            }
+        })
+        .catch((error) => {
+            showError('Error: ' + error.message);
+            displayMessage('Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.', 'error-message');
+        })
+        .finally(() => {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            sendButton.innerHTML = 'Enviar';
+            messageInput.focus();
+            currentFile = null;
+            fileInput.value = '';
+            filePreview.style.display = 'none';
         });
     }
 
