@@ -40,6 +40,11 @@ class QuestionnaireResponse(db.Model):
     interest_areas = db.Column(db.String(1))
     experience_level = db.Column(db.String(1))
     learning_tools = db.Column(db.String(1))
+
+    # Learning Difficulties
+    learning_difficulty = db.Column(db.String(20))
+    tdah_responses = db.Column(db.JSON)
+    dyslexia_responses = db.Column(db.JSON)
     
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
