@@ -11,17 +11,26 @@ function loadUserProfile() {
     })
     .then(response => response.json())
     .then(data => {
-        // Update email
-        document.getElementById('userEmail').textContent = data.email;
+        // Update email and learning difficulty
+        const userEmail = document.getElementById('userEmail');
+        if (userEmail) userEmail.textContent = data.email;
 
-        // Update profile progress
-        const progressBar = document.getElementById('profileProgress');
-        progressBar.style.width = `${data.progress || 0}%`;
-        progressBar.textContent = `${data.progress || 0}%`;
-
-        // Update learning style
+        // Update profile summary
         const learningStyle = document.getElementById('learningStyle');
-        learningStyle.textContent = data.learning_style || 'No definido';
+        if (learningStyle) {
+            let styleText = data.learning_style || 'No definido';
+            if (data.learning_difficulty && data.learning_difficulty !== 'Ninguno') {
+                styleText += ` (${data.learning_difficulty})`;
+            }
+            learningStyle.textContent = styleText;
+        }
+
+        // Update progress bar
+        const progressBar = document.getElementById('profileProgress');
+        if (progressBar) {
+            progressBar.style.width = `${data.progress || 0}%`;
+            progressBar.textContent = `${data.progress || 0}%`;
+        }
 
         // Update statistics
         updateStatistics(data);
