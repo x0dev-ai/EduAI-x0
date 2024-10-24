@@ -61,6 +61,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sections || !sections[index]) return false;
         
         const section = sections[index];
+        const learningDifficulty = section.querySelector('input[name="learning_difficulty"]:checked');
+        
+        // If this is the learning difficulties section
+        if (section.id === 'section5') {
+            // First validate the main selection
+            if (!learningDifficulty) {
+                alert('Por favor, selecciona una opción de dificultad de aprendizaje.');
+                return false;
+            }
+            
+            // If TDAH is selected, validate TDAH questions
+            if (learningDifficulty.value === 'TDAH') {
+                const tdahQuestions = section.querySelectorAll('#tdahQuestions select');
+                for (const select of tdahQuestions) {
+                    if (!select.value) {
+                        alert('Por favor, completa todas las preguntas específicas para TDAH.');
+                        return false;
+                    }
+                }
+            }
+            
+            // If Dislexia is selected, validate Dislexia questions
+            if (learningDifficulty.value === 'dislexia') {
+                const dyslexiaQuestions = section.querySelectorAll('#dyslexiaQuestions select');
+                for (const select of dyslexiaQuestions) {
+                    if (!select.value) {
+                        alert('Por favor, completa todas las preguntas específicas para Dislexia.');
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        // For other sections, keep existing validation
         const inputs = section.querySelectorAll('input[type="radio"], select');
         const groups = new Set();
         
