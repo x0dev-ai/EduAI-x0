@@ -17,7 +17,6 @@ from werkzeug.utils import secure_filename
 
 nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
 os.makedirs(nltk_data_dir, exist_ok=True)
-
 nltk.data.path.append(nltk_data_dir)
 
 def download_nltk_data():
@@ -47,10 +46,10 @@ def extract_topics(text):
                 if word not in stop_words 
                 and len(word) > 3 
                 and tag in ['NN', 'NNS', 'NNP', 'NNPS']]
-        return list(set(topics))
+        return list(set(topics)) if topics else ["general"]
     except Exception as e:
         print(f"Error in topic extraction: {e}")
-        return [text.lower()]
+        return ["general"]
 
 def calculate_user_progress(user_id):
     chat_history = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).all()
@@ -62,7 +61,7 @@ def calculate_user_progress(user_id):
     weighted_progress = 0
     
     for i, chat in enumerate(chat_history):
-        weight = 1 / (i + 1)
+        weight = 1 / (i + 1)  # Recent interactions have more weight
         interaction_score = 0
         if chat.helpful:
             interaction_score += 0.4
@@ -149,12 +148,13 @@ def analyze_user_progress(user_id):
         total_weight = 0
         weighted_score = 0
         for idx, interaction in enumerate(interactions):
-            weight = 1 / (idx + 1)
+            weight = 1 / (idx + 1)  # Recent interactions have more weight
             score = (interaction['understanding'] / 5.0) * (1.5 if interaction['helpful'] else 0.5)
             weighted_score += score * weight
             total_weight += weight
         mastery_scores[topic] = weighted_score / total_weight if total_weight > 0 else 0
 
+    # Calculate learning pace based on interaction frequency
     timestamps = [chat.timestamp for chat in recent_chats]
     if len(timestamps) > 1:
         time_diffs = [(t2 - t1).total_seconds() / 3600 
@@ -168,6 +168,7 @@ def analyze_user_progress(user_id):
     else:
         learning_pace = 'normal'
 
+    # Analyze learning trend
     if len(recent_chats) > 5:
         understanding_trend = np.polyfit(range(len(recent_chats)),
                                        [chat.user_understanding or 3 for chat in recent_chats],
@@ -180,6 +181,7 @@ def analyze_user_progress(user_id):
     else:
         learning_style = 'balanced'
 
+    # Extract preferred topics
     topics = []
     for chat in recent_chats:
         if chat.helpful:
@@ -199,62 +201,6 @@ def analyze_user_progress(user_id):
         'mastery_scores': mastery_scores,
         'user_id': user_id
     }
-
-def preprocess_text(text):
-    if not text:
-        return ""
-    text = ' '.join(text.split())
-    text = text.lower()
-    common_typos = {
-        'q ': 'que ',
-        'xq': 'porque',
-        'k ': 'que ',
-        'tb ': 'también ',
-    }
-    for typo, correction in common_typos.items():
-        text = text.replace(typo, correction)
-    return text
-
-def calculate_response_complexity(user_progress, topic_mastery):
-    base_complexity = 3
-    
-    if user_progress.get('learning_style') == 'struggling':
-        base_complexity = max(1, base_complexity - 1)
-    elif user_progress.get('learning_style') == 'advancing':
-        base_complexity = min(5, base_complexity + 1)
-    
-    if topic_mastery > 0.8:
-        base_complexity = min(5, base_complexity + 1)
-    elif topic_mastery < 0.4:
-        base_complexity = max(1, base_complexity - 1)
-        
-    return base_complexity
-
-def calculate_mastery_adjustment(chat_history, topic):
-    recent_interactions = [chat for chat in chat_history 
-                         if chat.topic == topic and chat.timestamp][-5:]
-    
-    if not recent_interactions:
-        return 0
-    
-    total_weight = 0
-    weighted_score = 0
-    
-    for idx, interaction in enumerate(recent_interactions):
-        weight = 1 / (idx + 1)
-        
-        score = 0
-        if interaction.helpful:
-            score += 0.3
-        if interaction.user_understanding:
-            score += (interaction.user_understanding / 5) * 0.4
-        if interaction.interaction_quality:
-            score += interaction.interaction_quality * 0.3
-            
-        weighted_score += score * weight
-        total_weight += weight
-    
-    return (weighted_score / total_weight) - 0.5
 
 def adapt_response_style(user_type, learning_progress):
     style_adjustments = {
@@ -311,6 +257,21 @@ def get_tailored_prompt(user_type, message, user_progress, similar_interactions)
         ChatMessage(role="user", content=f"Responde a la siguiente consulta: {message}")
     ]
 
+def calculate_response_complexity(user_progress, topic_mastery):
+    base_complexity = 3
+    
+    if user_progress.get('learning_style') == 'struggling':
+        base_complexity = max(1, base_complexity - 1)
+    elif user_progress.get('learning_style') == 'advancing':
+        base_complexity = min(5, base_complexity + 1)
+    
+    if topic_mastery > 0.8:
+        base_complexity = min(5, base_complexity + 1)
+    elif topic_mastery < 0.4:
+        base_complexity = max(1, base_complexity - 1)
+        
+    return base_complexity
+
 @chatbot_bp.route('/chat', methods=['POST'])
 @token_required
 def chat(current_user):
@@ -326,18 +287,17 @@ def chat(current_user):
         filename = secure_filename(file.filename)
         file_info = f"\nArchivo adjunto: {filename}"
     
-    processed_message = preprocess_text(message + file_info if file_info else message)
+    # Process message and analyze user progress
+    topics = extract_topics(message + file_info if file_info else message)
+    main_topic = topics[0] if topics else "general"
     
     user_progress = analyze_user_progress(current_user.id)
-    similar_interactions = find_similar_questions(processed_message, current_user.id)
-    
-    topics = extract_topics(processed_message)
-    main_topic = topics[0] if topics else "general"
+    similar_interactions = find_similar_questions(message, current_user.id)
     current_mastery = user_progress['mastery_scores'].get(main_topic, 0)
     
     try:
         messages = get_tailored_prompt(current_user.user_type, 
-                                     processed_message,
+                                     message,
                                      user_progress,
                                      similar_interactions)
         
@@ -349,18 +309,10 @@ def chat(current_user):
         )
         ai_response = chat_response.choices[0].message.content
         
+        # Calculate response complexity and update user progress
         complexity_level = calculate_response_complexity(user_progress, current_mastery)
         
-        current_user.interaction_count += 1
-        
-        recent_chats = ChatHistory.query.filter_by(
-            user_id=current_user.id,
-            topic=main_topic
-        ).order_by(ChatHistory.timestamp.desc()).limit(5).all()
-        
-        mastery_adjustment = calculate_mastery_adjustment(recent_chats, main_topic)
-        new_mastery = max(0, min(1, current_mastery + mastery_adjustment))
-        
+        # Create chat history entry
         chat_entry = ChatHistory(
             user_id=current_user.id,
             message=message + file_info if file_info else message,
@@ -368,9 +320,7 @@ def chat(current_user):
             topic=main_topic,
             complexity_level=complexity_level,
             response_time=time.time() - start_time,
-            preferred_pace=user_progress['learning_pace'],
-            mastery_level=new_mastery,
-            session_duration=0
+            preferred_pace=user_progress['learning_pace']
         )
         
         db.session.add(chat_entry)
@@ -412,10 +362,6 @@ def submit_feedback(current_user):
         if helpful is not None and understanding:
             chat.interaction_quality = (helpful + (understanding / 5)) / 2
             
-        if chat.timestamp:
-            session_duration = (datetime.utcnow() - chat.timestamp).total_seconds()
-            chat.session_duration = int(session_duration)
-            
         db.session.commit()
         return jsonify({'message': 'Feedback submitted successfully'}), 200
     except Exception as e:
@@ -425,14 +371,15 @@ def submit_feedback(current_user):
 @token_required
 def get_learning_report(current_user):
     try:
+        questionnaire = QuestionnaireResponse.query.filter_by(user_id=current_user.id).first()
         user_progress = analyze_user_progress(current_user.id)
-        if not user_progress:
-            return jsonify({'error': 'Could not generate learning report'}), 404
-
+        
         progress_data = {
+            'email': current_user.email,
             'progress': calculate_user_progress(current_user.id),
             'completed_questions': get_completed_questions_count(current_user.id),
             'learning_style': current_user.user_type,
+            'learning_difficulty': questionnaire.learning_difficulty if questionnaire else None,
             'mastery_scores': user_progress.get('mastery_scores', {}),
             'preferred_topics': user_progress.get('preferred_topics', []),
             'understanding_level': user_progress.get('understanding_level', 0),
