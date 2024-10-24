@@ -74,66 +74,197 @@
             </div>
         </div>
 
-        <!-- Previous sections 2-4 remain unchanged -->
-        <!-- ... -->
-
-        <!-- 5. Evaluación de Dificultades de Aprendizaje -->
-        <div class="questionnaire-section" id="section5">
-            <h3>5. Evaluación de Dificultades de Aprendizaje</h3>
+        <!-- Dimensión Metodológica (30 puntos) -->
+        <div class="questionnaire-section" id="section2">
+            <h3>2. Dimensión Metodológica (30 puntos)</h3>
             
             <div class="mb-4">
-                <label class="form-label">5.1. ¿Tienes alguna dificultad de aprendizaje específica?</label>
+                <label class="form-label">2.1. ¿Qué estilo de aprendizaje prefieres?</label>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="learning_difficulty" value="TDAH" required>
-                    <label class="form-check-label">TDAH (Trastorno por Déficit de Atención e Hiperactividad)</label>
+                    <input class="form-check-input" type="radio" name="learning_style" value="A" required>
+                    <label class="form-check-label">Sistemático y estructurado</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="learning_difficulty" value="Dislexia">
-                    <label class="form-check-label">Dislexia</label>
+                    <input class="form-check-input" type="radio" name="learning_style" value="B">
+                    <label class="form-check-label">Flexible y exploratorio</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="learning_difficulty" value="Ninguno">
-                    <label class="form-check-label">Ninguno</label>
+                    <input class="form-check-input" type="radio" name="learning_style" value="C">
+                    <label class="form-check-label">Intensivo y enfocado</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_style" value="D">
+                    <label class="form-check-label">Combinación de varios estilos</label>
                 </div>
             </div>
 
-            <!-- TDAH Questions (Initially hidden) -->
-            <div id="tdahQuestions" style="display: none;">
-                <h4 class="mb-3">Cuestionario TDAH</h4>
-                <div class="mb-4">
-                    <label class="form-label">5.2. ¿Qué aspectos del TDAH afectan más tu aprendizaje?</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="tdah_aspects" value="attention">
-                        <label class="form-check-label">Dificultad para mantener la atención</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="tdah_aspects" value="hyperactivity">
-                        <label class="form-check-label">Hiperactividad</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="tdah_aspects" value="impulsivity">
-                        <label class="form-check-label">Impulsividad</label>
-                    </div>
+            <div class="mb-4">
+                <label class="form-label">2.2. ¿Qué formato de contenido prefieres?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="content_format" value="A" required>
+                    <label class="form-check-label">Textos y lecturas</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="content_format" value="B">
+                    <label class="form-check-label">Videos y tutoriales</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="content_format" value="C">
+                    <label class="form-check-label">Discusiones y debates</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="content_format" value="D">
+                    <label class="form-check-label">Simulaciones y ejercicios prácticos</label>
                 </div>
             </div>
 
-            <!-- Dyslexia Questions (Initially hidden) -->
-            <div id="dyslexiaQuestions" style="display: none;">
-                <h4 class="mb-3">Cuestionario Dislexia</h4>
-                <div class="mb-4">
-                    <label class="form-label">5.2. ¿Qué aspectos de la dislexia afectan más tu aprendizaje?</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="dyslexia_aspects" value="reading">
-                        <label class="form-check-label">Dificultad en la lectura</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="dyslexia_aspects" value="writing">
-                        <label class="form-check-label">Dificultad en la escritura</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="dyslexia_aspects" value="comprehension">
-                        <label class="form-check-label">Dificultad en la comprensión</label>
-                    </div>
+            <div class="mb-4">
+                <label class="form-label">2.3. ¿Qué tipo de retroalimentación prefieres?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="feedback_preference" value="A" required>
+                    <label class="form-check-label">Detallada y analítica</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="feedback_preference" value="B">
+                    <label class="form-check-label">Breve y directa</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="feedback_preference" value="C">
+                    <label class="form-check-label">Centrada en mejoras y prácticas</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="feedback_preference" value="D">
+                    <label class="form-check-label">Variada y adaptable</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimensión Motivacional (25 puntos) -->
+        <div class="questionnaire-section" id="section3">
+            <h3>3. Dimensión Motivacional (25 puntos)</h3>
+            
+            <div class="mb-4">
+                <label class="form-label">3.1. ¿Cuáles son tus principales objetivos de aprendizaje?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_goals" value="A" required>
+                    <label class="form-check-label">Mejorar calificaciones académicas</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_goals" value="B">
+                    <label class="form-check-label">Desarrollo personal y crecimiento</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_goals" value="C">
+                    <label class="form-check-label">Aplicación práctica y profesional</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_goals" value="D">
+                    <label class="form-check-label">Exploración y curiosidad</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">3.2. ¿Qué te motiva a aprender?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="motivators" value="A" required>
+                    <label class="form-check-label">Metas específicas y desafíos</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="motivators" value="B">
+                    <label class="form-check-label">Curiosidad y descubrimiento</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="motivators" value="C">
+                    <label class="form-check-label">Aplicación inmediata y resultados</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="motivators" value="D">
+                    <label class="form-check-label">Variedad y diversión</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">3.3. ¿Qué desafíos reportas al aprender?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="challenges" value="A" required>
+                    <label class="form-check-label">Dificultad para mantener el enfoque</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="challenges" value="B">
+                    <label class="form-check-label">Falta de motivación a largo plazo</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="challenges" value="C">
+                    <label class="form-check-label">Dificultad para aplicar lo aprendido</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="challenges" value="D">
+                    <label class="form-check-label">Falta de tiempo y organización</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimensión de Contenido (25 puntos) -->
+        <div class="questionnaire-section" id="section4">
+            <h3>4. Dimensión de Contenido (25 puntos)</h3>
+            
+            <div class="mb-4">
+                <label class="form-label">4.1. ¿En qué áreas tienes mayor interés?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="A" required>
+                    <label class="form-check-label">Ciencias y matemáticas</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="B">
+                    <label class="form-check-label">Arte y humanidades</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="C">
+                    <label class="form-check-label">Negocios y emprendimiento</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="interest_areas" value="D">
+                    <label class="form-check-label">Tecnología y programación</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">4.2. ¿Cuál es tu nivel de experiencia en las áreas de interés?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="A" required>
+                    <label class="form-check-label">Principiante</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="B">
+                    <label class="form-check-label">Intermedio</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="C">
+                    <label class="form-check-label">Avanzado</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="experience_level" value="D">
+                    <label class="form-check-label">Variado según el tema</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">4.3. ¿Qué herramientas o recursos utilizas para aprender?</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="A" required>
+                    <label class="form-check-label">Libros y textos académicos</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="B">
+                    <label class="form-check-label">Videos y tutoriales en línea</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="C">
+                    <label class="form-check-label">Foros y comunidades en línea</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="learning_tools" value="D">
+                    <label class="form-check-label">Simulaciones y ejercicios prácticos</label>
                 </div>
             </div>
         </div>
