@@ -1,19 +1,38 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
     loadUserProfile();
     setupChatInterface();
 });
 
 function loadUserProfile() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
+
     fetch('/learning_report', {
         headers: {
-            'Authorization': localStorage.getItem('token')
+            'Authorization': token
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.status === 401) {
+            // Clear invalid token and redirect to login
+            localStorage.removeItem('token');
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
+        return response.json();
+    })
     .then(data => {
         // Update email and learning difficulty
         const userEmail = document.getElementById('userEmail');
-        if (userEmail) userEmail.textContent = data.email;
+        if (userEmail) userEmail.textContent = data.email || 'Usuario';
 
         // Update profile summary
         const learningStyle = document.getElementById('learningStyle');
@@ -36,32 +55,36 @@ function loadUserProfile() {
         updateStatistics(data);
     })
     .catch(error => {
-        console.error('Error loading learning report:', error);
-        showError('Error al cargar el reporte de aprendizaje');
+        if (error.message !== 'Unauthorized') {
+            console.error('Error loading learning report:', error);
+            showError('Error al cargar el reporte de aprendizaje');
+        }
     });
 }
 
 function updateStatistics(data) {
     // Update session count
     const sessionCount = document.querySelector('.col-md-3:nth-child(2) .fs-3');
-    sessionCount.textContent = data.completed_questions || '0';
+    if (sessionCount) {
+        sessionCount.textContent = data.completed_questions || '0';
+    }
 
     // Update study time (if available)
     const studyTime = document.querySelector('.col-md-3:nth-child(1) .fs-3');
-    if (data.total_study_time) {
+    if (studyTime && data.total_study_time) {
         const hours = Math.floor(data.total_study_time / 3600);
         studyTime.textContent = `${hours}h`;
     }
 
     // Update streak (if available)
     const streak = document.querySelector('.col-md-3:nth-child(3) .fs-3');
-    if (data.current_streak) {
+    if (streak && data.current_streak) {
         streak.textContent = `${data.current_streak} días`;
     }
 
     // Update last session
     const lastSession = document.querySelector('.col-md-3:nth-child(4) .text-muted');
-    if (data.last_session) {
+    if (lastSession && data.last_session) {
         const date = new Date(data.last_session);
         lastSession.textContent = date.toLocaleDateString('es-ES', {
             day: 'numeric',
@@ -84,6 +107,12 @@ function toggleChat(show) {
 }
 
 function setupChatInterface() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
+
     const chatForm = document.getElementById('chatForm');
     const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
@@ -146,11 +175,18 @@ function setupChatInterface() {
             fetch('/chat', {
                 method: 'POST',
                 headers: {
-                    'Authorization': localStorage.getItem('token')
+                    'Authorization': token
                 },
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/';
+                    throw new Error('Unauthorized');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     throw new Error(data.error);
@@ -158,8 +194,10 @@ function setupChatInterface() {
                 appendMessage('ai', data.response, data.chat_id);
             })
             .catch(error => {
-                console.error('Error:', error);
-                showError('Error al enviar mensaje: ' + error.message);
+                if (error.message !== 'Unauthorized') {
+                    console.error('Error:', error);
+                    showError('Error al enviar mensaje: ' + error.message);
+                }
             })
             .finally(() => {
                 // Reset button state
@@ -210,33 +248,69 @@ function appendMessage(type, content, chatId = null) {
 }
 
 function submitFeedback(chatId, helpful) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
+
     fetch('/chat_feedback', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': localStorage.getItem('token')
+            'Authorization': token
         },
         body: JSON.stringify({
             chat_id: chatId,
             helpful: helpful
         })
     })
-    .catch(error => console.error('Error submitting feedback:', error));
+    .then(response => {
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
+        return response.json();
+    })
+    .catch(error => {
+        if (error.message !== 'Unauthorized') {
+            console.error('Error submitting feedback:', error);
+        }
+    });
 }
 
 function submitUnderstanding(chatId, level) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
+
     fetch('/chat_feedback', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': localStorage.getItem('token')
+            'Authorization': token
         },
         body: JSON.stringify({
             chat_id: chatId,
             understanding: level
         })
     })
-    .catch(error => console.error('Error submitting understanding level:', error));
+    .then(response => {
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
+        return response.json();
+    })
+    .catch(error => {
+        if (error.message !== 'Unauthorized') {
+            console.error('Error submitting understanding level:', error);
+        }
+    });
 }
 
 function showError(message) {
