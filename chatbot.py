@@ -37,6 +37,190 @@ chatbot_bp = Blueprint('chatbot', __name__)
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
+def extract_topics(text):
+    """
+    Extract main topics from the input text using TF-IDF and POS tagging
+    """
+    try:
+        # Tokenize and get POS tags
+        tokens = word_tokenize(text.lower())
+        pos_tags = nltk.pos_tag(tokens)
+        
+        # Filter for nouns and important words
+        spanish_stopwords = set(stopwords.words('spanish'))
+        important_words = [word for word, pos in pos_tags 
+                         if word not in spanish_stopwords 
+                         and pos.startswith(('NN', 'VB', 'JJ'))
+                         and len(word) > 2]
+        
+        # Use TF-IDF to get important terms
+        if not important_words:
+            return ["general"]
+            
+        vectorizer = TfidfVectorizer(max_features=5)
+        tfidf_matrix = vectorizer.fit_transform([' '.join(important_words)])
+        
+        # Get top terms
+        feature_names = vectorizer.get_feature_names_out()
+        scores = tfidf_matrix.toarray()[0]
+        sorted_idx = np.argsort(scores)[::-1]
+        
+        topics = [feature_names[i] for i in sorted_idx[:3]]
+        return topics if topics else ["general"]
+    except Exception as e:
+        print(f"Error extracting topics: {e}")
+        return ["general"]
+
+def analyze_user_progress(user_id):
+    """
+    Analyze user's learning progress and preferences
+    """
+    try:
+        # Get user's questionnaire response
+        questionnaire = QuestionnaireResponse.query.filter_by(user_id=user_id).first()
+        
+        # Get chat history
+        chat_history = ChatHistory.query.filter_by(user_id=user_id).all()
+        
+        # Initialize progress data
+        progress = {
+            'total_interactions': len(chat_history),
+            'mastery_scores': {},
+            'learning_pace': 'moderate',
+            'preferred_topics': set(),
+            'average_understanding': 0
+        }
+        
+        if questionnaire:
+            # Map learning pace from questionnaire
+            pace_mapping = {
+                'A': 'slow',
+                'B': 'moderate',
+                'C': 'fast',
+                'D': 'variable'
+            }
+            progress['learning_pace'] = pace_mapping.get(questionnaire.learning_pace, 'moderate')
+        
+        # Analyze chat history
+        if chat_history:
+            understanding_scores = []
+            for chat in chat_history:
+                # Track topics
+                if chat.topic:
+                    progress['preferred_topics'].add(chat.topic)
+                    
+                # Update mastery scores
+                if chat.topic and chat.user_understanding:
+                    current_score = progress['mastery_scores'].get(chat.topic, 0)
+                    new_score = (current_score + chat.user_understanding/5.0) / 2
+                    progress['mastery_scores'][chat.topic] = new_score
+                
+                if chat.user_understanding:
+                    understanding_scores.append(chat.user_understanding)
+            
+            if understanding_scores:
+                progress['average_understanding'] = sum(understanding_scores) / len(understanding_scores)
+        
+        progress['preferred_topics'] = list(progress['preferred_topics'])
+        return progress
+    except Exception as e:
+        print(f"Error analyzing user progress: {e}")
+        return {
+            'total_interactions': 0,
+            'mastery_scores': {},
+            'learning_pace': 'moderate',
+            'preferred_topics': [],
+            'average_understanding': 0
+        }
+
+def find_similar_questions(query, user_id):
+    """
+    Find similar previous questions from the user's chat history
+    """
+    try:
+        # Get user's chat history
+        history = ChatHistory.query.filter_by(user_id=user_id).all()
+        if not history:
+            return []
+        
+        # Prepare messages for comparison
+        messages = [chat.message for chat in history]
+        if not messages:
+            return []
+            
+        # Calculate similarity using TF-IDF and cosine similarity
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform([query] + messages)
+        
+        # Calculate similarity scores
+        similarity_scores = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
+        
+        # Get top 3 similar interactions
+        similar_indices = similarity_scores.argsort()[::-1][:3]
+        similar_interactions = [
+            {
+                'message': history[idx].message,
+                'response': history[idx].response,
+                'similarity': similarity_scores[idx]
+            }
+            for idx in similar_indices if similarity_scores[idx] > 0.3
+        ]
+        
+        return similar_interactions
+    except Exception as e:
+        print(f"Error finding similar questions: {e}")
+        return []
+
+def get_tailored_prompt(user_type, message, user_progress, similar_interactions):
+    """
+    Generate a context-aware prompt based on user type and history
+    """
+    # Base prompt structure
+    system_message = {
+        "ESTRUCTURADO": "Eres un tutor que proporciona explicaciones detalladas y sistemáticas, con ejemplos paso a paso.",
+        "EXPLORADOR": "Eres un guía que fomenta el descubrimiento y proporciona múltiples perspectivas y conexiones.",
+        "INTENSIVO": "Eres un mentor que se enfoca en aplicaciones prácticas y resultados concretos."
+    }.get(user_type, "Eres un tutor adaptativo que personaliza sus respuestas según las necesidades del estudiante.")
+    
+    # Add learning context
+    context = f"\nEl estudiante tiene un ritmo de aprendizaje {user_progress['learning_pace']} "
+    context += f"y ha completado {user_progress['total_interactions']} interacciones previas. "
+    
+    if similar_interactions:
+        context += "\nHay preguntas similares previas que pueden ser relevantes."
+    
+    # Create the message list
+    messages = [
+        ChatMessage(role="system", content=system_message + context),
+        ChatMessage(role="user", content=message)
+    ]
+    
+    return messages
+
+def calculate_response_complexity(user_progress, current_mastery):
+    """
+    Calculate appropriate complexity level for the response
+    """
+    try:
+        # Base complexity on mastery and total interactions
+        base_complexity = 1 + min(current_mastery * 2, 3)  # Scale 1-4
+        
+        # Adjust based on total interactions
+        interaction_bonus = min(user_progress['total_interactions'] / 10, 1)  # Max +1
+        
+        # Adjust based on average understanding
+        understanding_factor = user_progress.get('average_understanding', 0) / 5  # 0-1 scale
+        
+        # Calculate final complexity
+        complexity = base_complexity + interaction_bonus
+        complexity *= (0.7 + 0.3 * understanding_factor)  # Slight adjustment based on understanding
+        
+        # Ensure within bounds 1-5
+        return max(1, min(5, round(complexity)))
+    except Exception as e:
+        print(f"Error calculating complexity: {e}")
+        return 1
+
 @chatbot_bp.route('/chat', methods=['POST'])
 @token_required
 def chat(current_user):
@@ -105,5 +289,35 @@ def chat(current_user):
         
     except Exception as e:
         print(f"Error in chat endpoint: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@chatbot_bp.route('/chat_feedback', methods=['POST'])
+@token_required
+def chat_feedback(current_user):
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        helpful = data.get('helpful')
+        understanding = data.get('understanding')
+        
+        if not chat_id:
+            return jsonify({'error': 'Chat ID is required'}), 400
+            
+        chat_entry = ChatHistory.query.get(chat_id)
+        if not chat_entry or chat_entry.user_id != current_user.id:
+            return jsonify({'error': 'Chat entry not found'}), 404
+            
+        if helpful is not None:
+            chat_entry.helpful = helpful
+            
+        if understanding is not None:
+            chat_entry.user_understanding = understanding
+            
+        db.session.commit()
+        return jsonify({'message': 'Feedback received'}), 200
+        
+    except Exception as e:
+        print(f"Error in chat feedback: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
