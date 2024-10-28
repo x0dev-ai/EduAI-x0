@@ -321,3 +321,88 @@ def chat_feedback(current_user):
         print(f"Error in chat feedback: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@chatbot_bp.route('/learning_report', methods=['GET'])
+@token_required
+def get_learning_report(current_user):
+    try:
+        questionnaire = QuestionnaireResponse.query.filter_by(user_id=current_user.id).first()
+        user_progress = analyze_user_progress(current_user.id)
+        chat_history = ChatHistory.query.filter_by(user_id=current_user.id).order_by(ChatHistory.timestamp.desc()).first()
+        
+        # Calculate time spent (in hours)
+        total_time = sum([chat.session_duration or 0 for chat in ChatHistory.query.filter_by(user_id=current_user.id).all()]) / 3600
+        
+        # Get session count
+        session_count = ChatHistory.query.filter_by(user_id=current_user.id).count()
+        
+        progress_data = {
+            'email': current_user.email,
+            'progress': calculate_user_progress(current_user.id),
+            'learning_style': current_user.user_type,
+            'learning_difficulty': questionnaire.learning_difficulty if questionnaire else None,
+            'total_time': round(total_time, 1),
+            'session_count': session_count,
+            'last_session': chat_history.timestamp.strftime('%Y-%m-%d %H:%M:%S') if chat_history else None,
+            'streak': calculate_streak(current_user.id)
+        }
+        return jsonify(progress_data), 200
+    except Exception as e:
+        print(f"Error generating learning report: {str(e)}")
+        return jsonify({'error': f'Error generating learning report: {str(e)}'}), 500
+
+def calculate_user_progress(user_id):
+    try:
+        # Get total possible interactions (questionnaire responses + chat history)
+        total_possible = 5  # Base progress from questionnaire
+        questionnaire = QuestionnaireResponse.query.filter_by(user_id=user_id).first()
+        if questionnaire:
+            total_possible += 5  # Additional progress for completing questionnaire
+        
+        # Calculate actual progress
+        progress = 0
+        if questionnaire:
+            progress += 5  # Base progress for having questionnaire data
+            # Add progress for each completed section
+            if questionnaire.learning_style:
+                progress += 1
+            if questionnaire.learning_difficulty:
+                progress += 1
+            if questionnaire.content_format:
+                progress += 1
+            if questionnaire.feedback_preference:
+                progress += 1
+            if questionnaire.learning_goals:
+                progress += 1
+        
+        # Calculate percentage
+        return min(100, int((progress / total_possible) * 100))
+    except Exception as e:
+        print(f"Error calculating user progress: {str(e)}")
+        return 0
+
+def calculate_streak(user_id):
+    try:
+        chat_history = ChatHistory.query.filter_by(user_id=user_id).order_by(ChatHistory.timestamp.desc()).all()
+        if not chat_history:
+            return 0
+            
+        streak = 0
+        current_date = datetime.now().date()
+        last_date = None
+        
+        for chat in chat_history:
+            chat_date = chat.timestamp.date()
+            if last_date is None:
+                last_date = chat_date
+                streak = 1
+            elif (last_date - chat_date).days == 1:
+                streak += 1
+                last_date = chat_date
+            else:
+                break
+                
+        return streak
+    except Exception as e:
+        print(f"Error calculating streak: {str(e)}")
+        return 0
