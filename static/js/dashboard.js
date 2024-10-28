@@ -107,14 +107,7 @@ function toggleChat(show) {
 }
 
 function setupChatInterface() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = '/';
-        return;
-    }
-
     const chatForm = document.getElementById('chatForm');
-    const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const fileInput = document.getElementById('fileInput');
     const filePreview = document.getElementById('filePreview');
@@ -122,6 +115,9 @@ function setupChatInterface() {
     const removeFile = document.getElementById('removeFile');
     let currentFile = null;
 
+    if (!chatForm) return; // Exit if form not found
+
+    // File handling
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
@@ -135,81 +131,91 @@ function setupChatInterface() {
     if (removeFile) {
         removeFile.addEventListener('click', function() {
             currentFile = null;
-            fileInput.value = '';
+            if (fileInput) fileInput.value = '';
             filePreview.style.display = 'none';
         });
     }
 
-    if (chatForm) {
-        chatForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = messageInput.value.trim();
-            
-            if (!message && !currentFile) {
-                showError('Por favor, escribe un mensaje o adjunta un archivo.');
-                return;
-            }
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showError('Token no encontrado. Por favor, inicie sesión nuevamente.');
+            window.location.href = '/';
+            return;
+        }
 
-            const formData = new FormData();
-            formData.append('message', message);
-            if (currentFile) {
-                formData.append('file', currentFile);
-            }
+        const message = messageInput.value.trim();
+        if (!message && !currentFile) {
+            showError('Por favor, escribe un mensaje o adjunta un archivo.');
+            return;
+        }
 
-            // Show loading state
-            const sendButton = document.getElementById('sendButton');
-            const originalText = sendButton.textContent;
-            sendButton.disabled = true;
-            sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+        const formData = new FormData();
+        formData.append('message', message);
+        if (currentFile) {
+            formData.append('file', currentFile);
+        }
 
-            // Add user message to chat
-            if (message) {
-                appendMessage('user', message);
-            }
-            if (currentFile) {
-                appendMessage('user', `[Archivo adjunto: ${currentFile.name}]`);
-            }
+        // Show loading state
+        const sendButton = document.getElementById('sendButton');
+        if (!sendButton) return;
+        
+        const originalText = sendButton.textContent;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
 
-            messageInput.value = '';
-            
-            fetch('/chat', {
-                method: 'POST',
-                headers: {
-                    'Authorization': token
-                },
-                body: formData
-            })
-            .then(response => {
-                if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/';
-                    throw new Error('Unauthorized');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                appendMessage('ai', data.response, data.chat_id);
-            })
-            .catch(error => {
-                if (error.message !== 'Unauthorized') {
-                    console.error('Error:', error);
-                    showError('Error al enviar mensaje: ' + error.message);
-                }
-            })
-            .finally(() => {
-                // Reset button state
-                sendButton.disabled = false;
-                sendButton.textContent = originalText;
-                // Reset file input
-                currentFile = null;
-                fileInput.value = '';
-                filePreview.style.display = 'none';
-            });
+        // Add user message to chat
+        if (message) {
+            appendMessage('user', message);
+        }
+        if (currentFile) {
+            appendMessage('user', `[Archivo adjunto: ${currentFile.name}]`);
+        }
+
+        messageInput.value = '';
+
+        fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Authorization': token
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/';
+                throw new Error('Unauthorized');
+            }
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            appendMessage('ai', data.response, data.chat_id);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Error al enviar mensaje: ' + error.message);
+            if (error.message === 'Unauthorized') {
+                window.location.href = '/';
+            }
+        })
+        .finally(() => {
+            // Reset button state
+            sendButton.disabled = false;
+            sendButton.textContent = originalText;
+            // Reset file input
+            currentFile = null;
+            if (fileInput) fileInput.value = '';
+            filePreview.style.display = 'none';
         });
-    }
+    });
 }
 
 function appendMessage(type, content, chatId = null) {
