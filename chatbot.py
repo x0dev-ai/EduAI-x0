@@ -24,6 +24,9 @@ def download_nltk_data():
         nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
         nltk.download('stopwords', download_dir=nltk_data_dir, quiet=True)
         nltk.download('averaged_perceptron_tagger', download_dir=nltk_data_dir, quiet=True)
+        nltk.download('spanish_grammars', download_dir=nltk_data_dir, quiet=True)
+        nltk.download('maxent_ne_chunker', download_dir=nltk_data_dir, quiet=True)
+        nltk.download('words', download_dir=nltk_data_dir, quiet=True)
     except Exception as e:
         print(f"Error downloading NLTK data: {e}")
         return False
@@ -42,16 +45,23 @@ def extract_topics(text):
     Extract main topics from the input text using TF-IDF and POS tagging
     """
     try:
-        # Tokenize and get POS tags
-        tokens = word_tokenize(text.lower())
-        pos_tags = nltk.pos_tag(tokens)
-        
-        # Filter for nouns and important words
-        spanish_stopwords = set(stopwords.words('spanish'))
-        important_words = [word for word, pos in pos_tags 
-                         if word not in spanish_stopwords 
-                         and pos.startswith(('NN', 'VB', 'JJ'))
-                         and len(word) > 2]
+        # Fallback to basic word tokenization if NLTK fails
+        try:
+            # Tokenize and get POS tags
+            tokens = word_tokenize(text.lower())
+            pos_tags = nltk.pos_tag(tokens)
+            
+            # Filter for nouns and important words
+            spanish_stopwords = set(stopwords.words('spanish'))
+            important_words = [word for word, pos in pos_tags 
+                             if word not in spanish_stopwords 
+                             and pos.startswith(('NN', 'VB', 'JJ'))
+                             and len(word) > 2]
+        except Exception as e:
+            print(f"NLTK processing failed, falling back to basic tokenization: {e}")
+            # Basic tokenization fallback
+            words = text.lower().split()
+            important_words = [word for word in words if len(word) > 2]
         
         # Use TF-IDF to get important terms
         if not important_words:
