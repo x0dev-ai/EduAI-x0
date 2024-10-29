@@ -8,7 +8,159 @@ document.addEventListener('DOMContentLoaded', function() {
     setupChatInterface();
 });
 
-// ... [previous functions remain unchanged until submitFeedback] ...
+function loadUserProfile() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/';
+        return;
+    }
+
+    fetch('/learning_report', {
+        headers: {
+            'Authorization': token
+        }
+    })
+    .then(response => {
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update email and learning difficulty
+        const userEmail = document.getElementById('userEmail');
+        if (userEmail) userEmail.textContent = data.email || 'Usuario';
+
+        // Update profile summary
+        const learningStyle = document.getElementById('learningStyle');
+        if (learningStyle) {
+            let styleText = data.learning_style || 'No definido';
+            if (data.learning_difficulty && data.learning_difficulty !== 'Ninguno') {
+                styleText += ` (${data.learning_difficulty})`;
+            }
+            learningStyle.textContent = styleText;
+        }
+
+        // Update progress bar
+        const progressBar = document.getElementById('profileProgress');
+        if (progressBar) {
+            progressBar.style.width = `${data.progress || 0}%`;
+            progressBar.textContent = `${data.progress || 0}%`;
+        }
+
+        // Update statistics
+        document.querySelector('[data-stat="time"]').textContent = `${data.total_time}h`;
+        document.querySelector('[data-stat="sessions"]').textContent = data.session_count;
+        document.querySelector('[data-stat="streak"]').textContent = `${data.streak} días`;
+        document.querySelector('[data-stat="last-session"]').textContent = data.last_session || 'Sin actividad';
+    })
+    .catch(error => {
+        if (error.message !== 'Unauthorized') {
+            console.error('Error loading learning report:', error);
+            showError('Error al cargar el reporte de aprendizaje');
+        }
+    });
+}
+
+function setupChatInterface() {
+    const chatForm = document.getElementById('chatForm');
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const removeFile = document.getElementById('removeFile');
+    let currentFile = null;
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                currentFile = e.target.files[0];
+                fileName.textContent = currentFile.name;
+                filePreview.style.display = 'block';
+            }
+        });
+    }
+
+    if (removeFile) {
+        removeFile.addEventListener('click', function() {
+            currentFile = null;
+            if (fileInput) fileInput.value = '';
+            filePreview.style.display = 'none';
+        });
+    }
+
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            const message = messageInput.value.trim();
+            if (!message && !currentFile) {
+                showError('Por favor, escribe un mensaje o adjunta un archivo.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('message', message);
+            if (currentFile) {
+                formData.append('file', currentFile);
+            }
+
+            // Show loading state
+            const sendButton = document.getElementById('sendButton');
+            if (!sendButton) return;
+            
+            const originalText = sendButton.textContent;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+
+            // Add user message to chat
+            if (message) {
+                appendMessage('user', message);
+            }
+            if (currentFile) {
+                appendMessage('user', `[Archivo adjunto: ${currentFile.name}]`);
+            }
+
+            messageInput.value = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                appendMessage('ai', data.response, data.chat_id);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error al enviar mensaje: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                sendButton.disabled = false;
+                sendButton.textContent = originalText;
+                // Reset file input
+                currentFile = null;
+                if (fileInput) fileInput.value = '';
+                filePreview.style.display = 'none';
+            });
+        });
+    }
+}
 
 function submitFeedback(chatId, helpful, button) {
     const token = localStorage.getItem('token');
@@ -121,4 +273,25 @@ function appendMessage(type, content, chatId = null) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// ... [rest of the file remains unchanged] ...
+function toggleChat(show) {
+    const chatSection = document.getElementById('chatSection');
+    if (chatSection) {
+        chatSection.style.display = show ? 'block' : 'none';
+        if (show) {
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+}
+
+function showError(message) {
+    const errorToast = document.getElementById('errorToast');
+    if (errorToast) {
+        const errorBody = errorToast.querySelector('.toast-body');
+        errorBody.textContent = message;
+        const toast = new bootstrap.Toast(errorToast);
+        toast.show();
+    } else {
+        console.error(message);
+    }
+}
