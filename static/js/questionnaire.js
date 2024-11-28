@@ -127,7 +127,19 @@ function submitQuestionnaire(formData) {
         return response.json();
     })
     .then(data => {
-        if (data.user_type) {
+        if (data.questionnaire_data) {
+            // Save questionnaire data in localStorage
+            LocalStorage.saveQuestionnaire(data.questionnaire_data);
+            
+            // Update user data with user type
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            user.user_type = data.user_type;
+            user.questionnaire_completed = true;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Update user in LocalStorage class
+            LocalStorage.saveUser(user);
+            
             alert('Cuestionario enviado exitosamente. Tu perfil de aprendizaje ha sido identificado.');
             window.location.href = '/dashboard';
         } else {

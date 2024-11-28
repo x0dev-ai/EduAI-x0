@@ -140,8 +140,10 @@ def submit_questionnaire(current_user):
         
         return jsonify({
             'message': 'Questionnaire processed successfully',
-            'questionnaire_data': questionnaire_data
+            'questionnaire_data': questionnaire_data,
+            'user_type': user_type
         }), 200
+
     except Exception as e:
         return jsonify({'error': f'Error processing questionnaire: {str(e)}'}), 500
 
