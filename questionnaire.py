@@ -127,40 +127,28 @@ def submit_questionnaire(current_user):
             if field not in data:
                 return jsonify({'error': f'Missing field: {field}'}), 400
 
-        new_response = QuestionnaireResponse(
-            user_id=current_user['id'],
-            study_time=data['study_time'],
-            session_duration=data['session_duration'],
-            learning_pace=data['learning_pace'],
-            learning_style=data['learning_style'],
-            content_format=data['content_format'],
-            feedback_preference=data['feedback_preference'],
-            learning_goals=data['learning_goals'],
-            motivators=data['motivators'],
-            challenges=data['challenges'],
-            interest_areas=data['interest_areas'],
-            experience_level=data['experience_level'],
-            learning_tools=data['learning_tools']
-        )
-        
         # Classify user type
         user_type = classify_user(data)
         
+        # Return the questionnaire data and user type for frontend storage
+        questionnaire_data = {
+            'user_id': current_user['id'],
+            'user_type': user_type,
+            'responses': data,
+            'timestamp': datetime.now().isoformat()
+        }
+        
         return jsonify({
-            'message': 'Questionnaire submitted successfully',
-            'user_type': user_type
+            'message': 'Questionnaire processed successfully',
+            'questionnaire_data': questionnaire_data
         }), 200
     except Exception as e:
-        return jsonify({'error': f'Error saving questionnaire: {str(e)}'}), 500
+        return jsonify({'error': f'Error processing questionnaire: {str(e)}'}), 500
 
 @questionnaire_bp.route('/get_user_profile', methods=['GET'])
 @token_required
 def get_user_profile(current_user):
-    if not current_user.get('questionnaire_completed'):
-        return jsonify({'message': 'Questionnaire not completed'}), 400
-
-    profile = {
+    return jsonify({
+        'message': 'Profile data should be retrieved from localStorage',
         'email': current_user['email']
-    }
-    
-    return jsonify(profile), 200
+    }), 200
