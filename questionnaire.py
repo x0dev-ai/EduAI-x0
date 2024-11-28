@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
+from models import User, QuestionnaireResponse, db
 from auth import token_required
-from datetime import datetime
 
 questionnaire_bp = Blueprint('questionnaire', __name__)
 
@@ -99,6 +99,7 @@ def classify_user(responses):
     else:
         scores['intensivo'] += 5
 
+    # Map profile types to user types for chatbot interaction
     profile_type = max(scores.items(), key=lambda x: x[1])[0]
     user_type_mapping = {
         'estructurado': 'ESTRUCTURADO',
@@ -116,6 +117,7 @@ def submit_questionnaire(current_user):
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
+        # Validate required fields
         required_fields = [
             'study_time', 'session_duration', 'learning_pace',
             'learning_style', 'content_format', 'feedback_preference',
@@ -127,30 +129,67 @@ def submit_questionnaire(current_user):
             if field not in data:
                 return jsonify({'error': f'Missing field: {field}'}), 400
 
-        # Classify user type
+        # Create new questionnaire response
+        new_response = QuestionnaireResponse(
+            user_id=current_user.id,
+            study_time=data['study_time'],
+            session_duration=data['session_duration'],
+            learning_pace=data['learning_pace'],
+            learning_style=data['learning_style'],
+            content_format=data['content_format'],
+            feedback_preference=data['feedback_preference'],
+            learning_goals=data['learning_goals'],
+            motivators=data['motivators'],
+            challenges=data['challenges'],
+            interest_areas=data['interest_areas'],
+            experience_level=data['experience_level'],
+            learning_tools=data['learning_tools']
+        )
+        
+        db.session.add(new_response)
+        
+        # Determine user type based on responses
         user_type = classify_user(data)
+        current_user.user_type = user_type
+        current_user.questionnaire_completed = True
         
-        # Return the questionnaire data and user type for frontend storage
-        questionnaire_data = {
-            'user_id': current_user['id'],
-            'user_type': user_type,
-            'responses': data,
-            'timestamp': datetime.now().isoformat()
-        }
-        
+        db.session.commit()
         return jsonify({
-            'message': 'Questionnaire processed successfully',
-            'questionnaire_data': questionnaire_data,
+            'message': 'Questionnaire submitted successfully',
             'user_type': user_type
         }), 200
-
     except Exception as e:
-        return jsonify({'error': f'Error processing questionnaire: {str(e)}'}), 500
+        db.session.rollback()
+        return jsonify({'error': f'Error saving questionnaire: {str(e)}'}), 500
 
 @questionnaire_bp.route('/get_user_profile', methods=['GET'])
 @token_required
 def get_user_profile(current_user):
-    return jsonify({
-        'message': 'Profile data should be retrieved from localStorage',
-        'email': current_user['email']
-    }), 200
+    if not current_user.questionnaire_completed:
+        return jsonify({'message': 'Questionnaire not completed'}), 400
+
+    questionnaire = QuestionnaireResponse.query.filter_by(user_id=current_user.id).first()
+    
+    if not questionnaire:
+        return jsonify({'message': 'Questionnaire data not found'}), 404
+    
+    profile = {
+        'email': current_user.email,
+        'user_type': current_user.user_type,
+        'questionnaire_responses': {
+            'study_time': questionnaire.study_time,
+            'session_duration': questionnaire.session_duration,
+            'learning_pace': questionnaire.learning_pace,
+            'learning_style': questionnaire.learning_style,
+            'content_format': questionnaire.content_format,
+            'feedback_preference': questionnaire.feedback_preference,
+            'learning_goals': questionnaire.learning_goals,
+            'motivators': questionnaire.motivators,
+            'challenges': questionnaire.challenges,
+            'interest_areas': questionnaire.interest_areas,
+            'experience_level': questionnaire.experience_level,
+            'learning_tools': questionnaire.learning_tools
+        }
+    }
+    
+    return jsonify(profile), 200

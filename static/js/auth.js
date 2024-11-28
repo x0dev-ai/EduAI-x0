@@ -64,13 +64,7 @@ async function getToken(email) {
             const tokenDisplay = document.getElementById('tokenDisplay');
             tokenDisplay.textContent = 'Tu token: ' + data.token;
             tokenDisplay.style.display = 'block';
-            // Save user data in localStorage
             localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify({
-                email: data.email,
-                token: data.token,
-                questionnaire_completed: false
-            }));
             
             // Add a small delay before redirecting
             setTimeout(() => {
@@ -99,16 +93,8 @@ async function login(token) {
         const data = await handleResponse(response);
         
         if (data.message === 'Login successful') {
-            // Update user data in localStorage
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            user.token = cleanToken;
-            user.email = data.email;
-            localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('token', cleanToken);
-            
-            // Check questionnaire completion from localStorage
-            const questionnaire = localStorage.getItem('questionnaire');
-            window.location.href = questionnaire ? '/dashboard' : '/questionnaire';
+            window.location.href = data.questionnaire_completed ? '/dashboard' : '/questionnaire';
         }
     } catch (error) {
         console.error('Error:', error);

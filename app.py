@@ -1,8 +1,29 @@
 import os
 from flask import Flask, render_template
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "eduai_companion_secret_key"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+db.init_app(app)
+
+with app.app_context():
+    import models
+    import auth
+    import questionnaire
+    import chatbot
+    db.drop_all()  # Drop all existing tables
+    db.create_all()  # Create new tables with updated schema
 
 # Register blueprints
 from auth import auth_bp
@@ -18,7 +39,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/questionnaire')
-def questionnaire_view():
+def questionnaire():
     return render_template('questionnaire.html')
 
 @app.route('/dashboard')

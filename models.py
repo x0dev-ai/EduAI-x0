@@ -1,58 +1,69 @@
+from app import db
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
-class LocalStorageModel:
-    @staticmethod
-    def to_dict(obj):
-        return {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    token = db.Column(db.String(500), unique=True, nullable=True)
+    password_hash = db.Column(db.String(256), nullable=True, default=None)
+    user_type = db.Column(db.String(20), nullable=True, default=None)
+    questionnaire_completed = db.Column(db.Boolean, nullable=False, default=False)
+    interaction_count = db.Column(db.Integer, default=0)  # Track total interactions
 
-class User:
-    def __init__(self, email, token=None, password_hash=None, user_type=None):
-        self.email = email
-        self.token = token
-        self.password_hash = password_hash
-        self.user_type = user_type
-        self.questionnaire_completed = False
-        self.interaction_count = 0
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-    def to_dict(self):
-        return LocalStorageModel.to_dict(self)
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-class QuestionnaireResponse:
-    def __init__(self, user_id, **kwargs):
-        self.user_id = user_id
-        self.study_time = kwargs.get('study_time')
-        self.session_duration = kwargs.get('session_duration')
-        self.learning_pace = kwargs.get('learning_pace')
-        self.learning_style = kwargs.get('learning_style')
-        self.content_format = kwargs.get('content_format')
-        self.feedback_preference = kwargs.get('feedback_preference')
-        self.learning_goals = kwargs.get('learning_goals')
-        self.motivators = kwargs.get('motivators')
-        self.challenges = kwargs.get('challenges')
-        self.interest_areas = kwargs.get('interest_areas')
-        self.experience_level = kwargs.get('experience_level')
-        self.learning_tools = kwargs.get('learning_tools')
+class QuestionnaireResponse(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Dimensión Temporal (20 puntos)
+    study_time = db.Column(db.String(1))
+    session_duration = db.Column(db.String(1))
+    learning_pace = db.Column(db.String(1))
+    
+    # Dimensión Metodológica (30 puntos)
+    learning_style = db.Column(db.String(1))
+    content_format = db.Column(db.String(1))
+    feedback_preference = db.Column(db.String(1))
+    
+    # Dimensión Motivacional (25 puntos)
+    learning_goals = db.Column(db.String(1))
+    motivators = db.Column(db.String(1))
+    challenges = db.Column(db.String(1))
+    
+    # Dimensión de Contenido (25 puntos)
+    interest_areas = db.Column(db.String(1))
+    experience_level = db.Column(db.String(1))
+    learning_tools = db.Column(db.String(1))
 
-    def to_dict(self):
-        return LocalStorageModel.to_dict(self)
+    # Learning Difficulties
+    learning_difficulty = db.Column(db.String(20))
+    tdah_responses = db.Column(db.JSON)
+    dyslexia_responses = db.Column(db.JSON)
+    
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
-class ChatHistory:
-    def __init__(self, user_id, message, response, **kwargs):
-        self.user_id = user_id
-        self.message = message
-        self.response = response
-        self.timestamp = kwargs.get('timestamp', datetime.now().isoformat())
-        self.helpful = kwargs.get('helpful')
-        self.topic = kwargs.get('topic')
-        self.complexity_level = kwargs.get('complexity_level')
-        self.user_understanding = kwargs.get('user_understanding')
-        self.response_time = kwargs.get('response_time')
-        self.feedback_comments = kwargs.get('feedback_comments')
-        self.learning_progress = kwargs.get('learning_progress')
-        self.mastery_level = kwargs.get('mastery_level')
-        self.session_duration = kwargs.get('session_duration')
-        self.preferred_pace = kwargs.get('preferred_pace')
-        self.interaction_quality = kwargs.get('interaction_quality')
-
-    def to_dict(self):
-        return LocalStorageModel.to_dict(self)
+class ChatHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    response = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    helpful = db.Column(db.Boolean, nullable=True)  # User feedback on response
+    topic = db.Column(db.String(100))  # Topic classification
+    complexity_level = db.Column(db.Integer)  # Track response complexity (1-5)
+    user_understanding = db.Column(db.Integer)  # User comprehension level (1-5)
+    
+    # New fields for enhanced monitoring
+    response_time = db.Column(db.Float)  # Response time in seconds
+    feedback_comments = db.Column(db.Text)  # Detailed user feedback
+    learning_progress = db.Column(db.Float)  # Comprehension improvement (-1 to 1)
+    mastery_level = db.Column(db.Float)  # Topic mastery level (0-1)
+    session_duration = db.Column(db.Integer)  # Time spent on this interaction
+    preferred_pace = db.Column(db.String(20))  # User's learning pace preference
+    interaction_quality = db.Column(db.Float)  # Combined quality score (0-1)
