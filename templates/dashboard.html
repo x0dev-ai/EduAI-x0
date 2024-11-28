@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Message -->
+    <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-mortarboard-fill fs-2 me-3"></i>
+        <h2 class="mb-0">Bienvenido, <span id="userEmail"></span></h2>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Statistics Card -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Estadísticas de Estudio
+                    </h5>
+                    <p class="text-muted">Tu progreso y logros</p>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <div class="d-flex flex-column align-items-center">
+                                <h6 class="mb-3">Tiempo dedicado</h6>
+                                <span class="fs-3 fw-bold" data-stat="time">0h</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex flex-column align-items-center">
+                                <h6 class="mb-3">Sesiones</h6>
+                                <span class="fs-3 fw-bold" data-stat="sessions">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex flex-column align-items-center">
+                                <h6 class="mb-3">Racha actual</h6>
+                                <span class="fs-3 fw-bold" data-stat="streak">0 días</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex flex-column align-items-center">
+                                <h6 class="mb-3">Última sesión</h6>
+                                <span class="text-muted" data-stat="last-session">Sin actividad</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Summary Card -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Resumen del Perfil de Aprendizaje
+                    </h5>
+                    <p class="text-muted mb-2">Tu progreso y estilo de aprendizaje personalizado</p>
+                    <div class="d-flex align-items-center mb-3">
+                        <div>
+                            <p class="mb-1">Estilo de aprendizaje:</p>
+                            <span class="badge bg-dark" id="learningStyle">ESTRUCTURADO</span>
+                        </div>
+                    </div>
+                    <div class="progress mb-3">
+                        <div id="profileProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Card -->
+        <div class="col-12" id="chatSection" style="display: none;">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        Chat con EduAI
+                        <button type="button" class="btn-close float-end" aria-label="Close" onclick="toggleChat(false)"></button>
+                    </h5>
+                    <div id="chatMessages" class="chat-container mb-3"></div>
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <input type="text" id="messageInput" class="form-control" placeholder="Escribe tu pregunta..." aria-label="Mensaje">
+                            <label class="btn btn-outline-secondary" for="fileInput">
+                                <i class="fas fa-paperclip"></i>
+                                <input type="file" id="fileInput" style="display: none">
+                            </label>
+                            <button class="btn btn-primary" type="submit" id="sendButton">Enviar</button>
+                        </div>
+                        <div id="filePreview" class="mt-2" style="display: none;">
+                            <small class="text-muted">Archivo adjunto: <span id="fileName"></span></small>
+                            <button type="button" class="btn btn-sm btn-link text-danger" id="removeFile">Eliminar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Access Button -->
+    <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000;">
+        <button class="btn btn-primary btn-lg rounded-circle shadow-lg" onclick="toggleChat(true)">
+            <i class="bi bi-chat-dots-fill"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
