@@ -1,5 +1,4 @@
 from datetime import datetime
-import json
 
 class LocalStorageModel:
     @staticmethod
@@ -33,9 +32,6 @@ class QuestionnaireResponse:
         self.interest_areas = kwargs.get('interest_areas')
         self.experience_level = kwargs.get('experience_level')
         self.learning_tools = kwargs.get('learning_tools')
-        self.learning_difficulty = kwargs.get('learning_difficulty')
-        self.tdah_responses = kwargs.get('tdah_responses')
-        self.dyslexia_responses = kwargs.get('dyslexia_responses')
 
     def to_dict(self):
         return LocalStorageModel.to_dict(self)

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models import User, QuestionnaireResponse
 from auth import token_required
+from datetime import datetime
 
 questionnaire_bp = Blueprint('questionnaire', __name__)
 

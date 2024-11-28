@@ -1,7 +1,6 @@
 import os
 import nltk
 from flask import Blueprint, request, jsonify
-from models import User
 from auth import token_required
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
@@ -120,6 +119,7 @@ def chat(current_user):
         ai_response = chat_response.choices[0].message.content
         
         chat_data = {
+            'user_id': current_user['id'],
             'message': full_message,
             'response': ai_response,
             'topic': main_topic,
