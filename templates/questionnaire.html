@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="{{ url_for('static', filename='js/localStorage.js') }}"></script>
+<script src="{{ url_for('static', filename='js/questionnaire.js') }}"></script>
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Cuestionario para Clasificación de Perfiles de Usuario</h1>
+    
+    <form id="questionnaireForm">
+        <!-- Dimensión Temporal -->
+        <div class="section mb-4">
+            <h2>1. Dimensión Temporal (20 puntos)</h2>
+            
+            <div class="form-group">
+                <h4>1.1. ¿En qué horario prefieres estudiar?</h4>
+                <div class="form-check">
+                    <input type="radio" name="study_time" value="A" required class="form-check-input">
+                    <label class="form-check-label">A) Mañana (6:00 AM - 12:00 PM)</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="study_time" value="B" class="form-check-input">
+                    <label class="form-check-label">B) Tarde (12:00 PM - 6:00 PM)</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="study_time" value="C" class="form-check-input">
+                    <label class="form-check-label">C) Noche (6:00 PM - 12:00 AM)</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="study_time" value="D" class="form-check-input">
+                    <label class="form-check-label">D) Variado (depende del día)</label>
+                </div>
+            </div>
+
+            <!-- Add remaining questions following the same pattern -->
+            <!-- You can add the rest of the questions following the same structure -->
+            
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary">Enviar Cuestionario</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
